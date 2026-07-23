@@ -1,7 +1,7 @@
 # UnknownEngine
 A Engine based on PsychEngine 1.0.4
 # Intro
-This engine is managed to make mod dev more easier with less change of original stuffs, instead of other engine, we allow you guys to modify, republic, well, Apache 2.0 you know
+This engine is managed to make mod dev more easier with less change of original stuffs, instead of other engine, we allow you guys to modify, republish, well, Apache 2.0 you know,
 We provide the build script and all in one build script(made by me)
 # Something
 This engine is a kind of...unstable
