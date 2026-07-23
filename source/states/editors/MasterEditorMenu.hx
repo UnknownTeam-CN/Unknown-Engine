@@ -10,14 +10,14 @@ import states.FreeplayState;
 class MasterEditorMenu extends MusicBeatState
 {
 	var options:Array<String> = [
-		'Chart Editor',
-		'Character Editor',
-		'Stage Editor',
-		'Week Editor',
-		'Menu Character Editor',
-		'Dialogue Editor',
-		'Dialogue Portrait Editor',
-		'Note Splash Editor'
+		Language.getPhrase('editor_chart', 'Chart Editor'),
+		Language.getPhrase('editor_character', 'Character Editor'),
+		Language.getPhrase('editor_stage', 'Stage Editor'),
+		Language.getPhrase('editor_week', 'Week Editor'),
+		Language.getPhrase('editor_menu_char', 'Menu Character Editor'),
+		Language.getPhrase('editor_dialogue', 'Dialogue Editor'),
+		Language.getPhrase('editor_dialogue_portrait', 'Dialogue Portrait Editor'),
+		Language.getPhrase('editor_note_splash', 'Note Splash Editor')
 	];
 	private var grpTexts:FlxTypedGroup<Alphabet>;
 	private var directories:Array<String> = [null];
@@ -57,7 +57,7 @@ class MasterEditorMenu extends MusicBeatState
 		add(textBG);
 
 		directoryTxt = new FlxText(textBG.x, textBG.y + 4, FlxG.width, '', 32);
-		directoryTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
+		directoryTxt.setFormat(Paths.font('pixel-latin.ttf'), 32, FlxColor.WHITE, CENTER);
 		directoryTxt.scrollFactor.set();
 		add(directoryTxt);
 		
@@ -104,22 +104,22 @@ class MasterEditorMenu extends MusicBeatState
 
 		if (controls.ACCEPT)
 		{
-			switch(options[curSelected]) {
-				case 'Chart Editor'://felt it would be cool maybe
+			switch(curSelected) {
+				case 0: // Chart Editor
 					LoadingState.loadAndSwitchState(new ChartingState(), false);
-				case 'Character Editor':
+				case 1: // Character Editor
 					LoadingState.loadAndSwitchState(new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
-				case 'Stage Editor':
+				case 2: // Stage Editor
 					LoadingState.loadAndSwitchState(new StageEditorState());
-				case 'Week Editor':
+				case 3: // Week Editor
 					MusicBeatState.switchState(new WeekEditorState());
-				case 'Menu Character Editor':
+				case 4: // Menu Character Editor
 					MusicBeatState.switchState(new MenuCharacterEditorState());
-				case 'Dialogue Editor':
+				case 5: // Dialogue Editor
 					LoadingState.loadAndSwitchState(new DialogueEditorState(), false);
-				case 'Dialogue Portrait Editor':
+				case 6: // Dialogue Portrait Editor
 					LoadingState.loadAndSwitchState(new DialogueCharacterEditorState(), false);
-				case 'Note Splash Editor':
+				case 7: // Note Splash Editor
 					MusicBeatState.switchState(new NoteSplashEditorState());
 			}
 			FlxG.sound.music.volume = 0;
@@ -156,7 +156,7 @@ class MasterEditorMenu extends MusicBeatState
 	
 		WeekData.setDirectoryFromWeek();
 		if(directories[curDirectory] == null || directories[curDirectory].length < 1)
-			directoryTxt.text = '< No Mod Directory Loaded >';
+			directoryTxt.text = Language.getPhrase('editor_no_mod_dir', '< No Mod Directory Loaded >');
 		else
 		{
 			Mods.currentModDirectory = directories[curDirectory];

@@ -67,6 +67,16 @@ class TitleState extends MusicBeatState
 		{
 			ClientPrefs.loadPrefs();
 			Language.reloadPhrases();
+
+			#if TRANSLATIONS_ALLOWED
+			if(ClientPrefs.data.firstLaunch)
+			{
+				persistentUpdate = true;
+				persistentDraw = true;
+				openSubState(new substates.FirstLaunchLanguageSubState());
+				return;
+			}
+			#end
 		}
 
 		curWacky = FlxG.random.getObject(getIntroTextShit());

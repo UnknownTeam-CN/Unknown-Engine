@@ -17,6 +17,8 @@ import openfl.events.Event;
 import openfl.display.StageScaleMode;
 import lime.app.Application;
 import states.TitleState;
+import flixel.system.FlxAssets;
+import backend.Paths;
 
 #if HSCRIPT_ALLOWED
 import crowplexus.iris.Iris;
@@ -155,6 +157,7 @@ class Main extends Sprite
 		ClientPrefs.loadDefaultKeys();
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
 
+		FlxAssets.FONT_DEFAULT = Paths.font('editor_font.ttf');
 		addChild(new FlxGame(game.width, game.height, game.initialState, game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
 
 		#if !mobile

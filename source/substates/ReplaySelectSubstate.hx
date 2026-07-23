@@ -54,18 +54,18 @@ class ReplaySelectSubstate extends MusicBeatSubstate
 		add(bg);
 		FlxTween.tween(bg, {alpha: 0.75}, 0.3, {ease: FlxEase.quartOut});
 
-		titleText = new FlxText(0, 30, FlxG.width, "REPLAYS - " + songName.toUpperCase(), 40);
+		titleText = new FlxText(0, 30, FlxG.width, Language.getPhrase('replay_subtitle', "REPLAYS - {1}").replace('{1}', songName.toUpperCase()), 40);
 		titleText.setFormat(Paths.font("vcr.ttf"), 40, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.scrollFactor.set();
 		add(titleText);
 
 		hintText = new FlxText(0, FlxG.height - 60, FlxG.width,
-			"ENTER = Play  |  RESET = Delete  |  BACK = Return", 18);
+			Language.getPhrase('replay_controls_hint', "ENTER = Play  |  RESET = Delete  |  BACK = Return"), 18);
 		hintText.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.GRAY, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		hintText.scrollFactor.set();
 		add(hintText);
 
-		noReplayText = new FlxText(0, FlxG.height * 0.4, FlxG.width, "No replay files found.\nPlay a song first to generate replays!", 24);
+		noReplayText = new FlxText(0, FlxG.height * 0.4, FlxG.width, Language.getPhrase('replay_no_files', "No replay files found.") + "\n" + Language.getPhrase('replay_play_first', "Play a song first to generate replays!"), 24);
 		noReplayText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		noReplayText.scrollFactor.set();
 		noReplayText.visible = false;
@@ -86,7 +86,7 @@ class ReplaySelectSubstate extends MusicBeatSubstate
 		if (!FileSystem.exists(dir))
 		{
 			noReplayText.visible = true;
-			noReplayText.text = "No replay files found for '" + targetSongName + "'.\nPlay this song first to generate replays!";
+			noReplayText.text = Language.getPhrase('replay_no_files_song', "No replay files found for '{1}'.").replace('{1}', targetSongName) + "\n" + Language.getPhrase('replay_play_first', "Play this song first to generate replays!");
 			return;
 		}
 
@@ -118,17 +118,18 @@ class ReplaySelectSubstate extends MusicBeatSubstate
 		if (replays.length == 0)
 		{
 			noReplayText.visible = true;
-			noReplayText.text = "No replay files found for '" + targetSongName + "'.\nPlay this song first to generate replays!";
+			noReplayText.text = Language.getPhrase('replay_no_files_song', "No replay files found for '{1}'.").replace('{1}', targetSongName) + "\n" + Language.getPhrase('replay_play_first', "Play this song first to generate replays!");
 			return;
 		}
 
 		for (i in 0...replays.length)
 		{
 			var info:ReplayFileInfo = replays[i];
-			var diffName:String = (info.songDiffName != null && info.songDiffName != "") ? info.songDiffName.toUpperCase() : "NORMAL";
+			var diffName:String = (info.songDiffName != null && info.songDiffName != "") ? info.songDiffName.toUpperCase() : Language.getPhrase('replay_normal', "NORMAL");
 
+			var speedStr:String = Language.getPhrase('replay_info_line', "{1}  [{2}]  -  {3}x Speed").replace('{1}', info.dateStr).replace('{2}', diffName).replace('{3}', Std.string(info.noteSpeed));
 			var text:FlxText = new FlxText(0, 120 + (i * 50), FlxG.width,
-				info.dateStr + "  [" + diffName + "]  -  " + info.noteSpeed + "x Speed", 24);
+				speedStr, 24);
 			text.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			text.ID = i;
 			text.scrollFactor.set();
@@ -146,7 +147,7 @@ class ReplaySelectSubstate extends MusicBeatSubstate
 			var json:Dynamic = Json.parse(content);
 
 			// Extract date from filename: ue_YYYY-MM-DD_...
-			var dateStr:String = "Unknown";
+			var dateStr:String = Language.getPhrase('replay_unknown', "Unknown");
 			var parts:Array<String> = fileName.split("_");
 			if (parts.length >= 2)
 			{

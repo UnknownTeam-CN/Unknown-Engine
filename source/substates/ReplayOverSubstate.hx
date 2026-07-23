@@ -33,14 +33,14 @@ class ReplayOverSubstate extends MusicBeatSubstate
 		add(bg);
 		FlxTween.tween(bg, {alpha: 0.75}, 0.4, {ease: FlxEase.quartOut});
 
-		titleText = new FlxText(0, FlxG.height * 0.30, FlxG.width, "REPLAY FINISHED", 48);
+		titleText = new FlxText(0, FlxG.height * 0.30, FlxG.width, Language.getPhrase('replay_finished', "REPLAY FINISHED"), 48);
 		titleText.setFormat(Paths.font("vcr.ttf"), 48, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.alpha = 0;
 		titleText.scrollFactor.set();
 		add(titleText);
 		FlxTween.tween(titleText, {alpha: 1}, 0.4, {ease: FlxEase.quartOut});
 
-		replayText = new FlxText(0, FlxG.height * 0.50, FlxG.width, "Press ACCEPT to Replay Again", 28);
+		replayText = new FlxText(0, FlxG.height * 0.50, FlxG.width, Language.getPhrase('replay_press_accept_again', "Press ACCEPT to Replay Again"), 28);
 		replayText.setFormat(Paths.font("vcr.ttf"), 28, FlxColor.YELLOW, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		replayText.alpha = 0;
 		replayText.scrollFactor.set();
@@ -49,7 +49,7 @@ class ReplayOverSubstate extends MusicBeatSubstate
 			onComplete: function(_) { canChoose = true; }
 		});
 
-		exitText = new FlxText(0, FlxG.height * 0.58, FlxG.width, "Press BACK to Exit", 24);
+		exitText = new FlxText(0, FlxG.height * 0.58, FlxG.width, Language.getPhrase('replay_press_back_exit', "Press BACK to Exit"), 24);
 		exitText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		exitText.alpha = 0;
 		exitText.scrollFactor.set();

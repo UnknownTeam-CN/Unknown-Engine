@@ -32,7 +32,7 @@ class LoadReplayState extends MusicBeatState
 		bg.alpha = 0.7;
 		add(bg);
 
-		titleText = new FlxText(20, -80, 0, "Load Replay", 42);
+		titleText = new FlxText(20, -80, 0, Language.getPhrase('load_replay_title', 'Load Replay'), 42);
 		titleText.setFormat(Paths.font("vcr.ttf"), 42, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.scrollFactor.set();
 		add(titleText);
@@ -47,7 +47,7 @@ class LoadReplayState extends MusicBeatState
 		infoText.scrollFactor.set();
 		add(infoText);
 
-		enterText = new FlxText(FlxG.width - 400, FlxG.height - 60, 0, "ENTER - Load    ESC - Back", 22);
+		enterText = new FlxText(FlxG.width - 400, FlxG.height - 60, 0, Language.getPhrase('load_replay_enter', 'ENTER - Load') + "    " + Language.getPhrase('load_replay_esc', 'ESC - Back'), 22);
 		enterText.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		enterText.scrollFactor.set();
 		add(enterText);
@@ -88,7 +88,7 @@ class LoadReplayState extends MusicBeatState
 	{
 		if (replayFiles.length == 0)
 		{
-			replayListText.text = "No replays found.\nPlay a song to create one!";
+			replayListText.text = Language.getPhrase('load_replay_no_replays', 'No replays found.') + "\n" + Language.getPhrase('load_replay_play_to_create', 'Play a song to create one!');
 			infoText.text = "";
 			return;
 		}
@@ -114,7 +114,7 @@ class LoadReplayState extends MusicBeatState
 			var songName:String = parsed.songName;
 			var diff:Int = parsed.songDiff;
 			var ver:String = parsed.replayGameVer;
-			infoText.text = 'Song: $songName | Diff: $diff | Ver: $ver';
+			infoText.text = Language.getPhrase('replay_load_info', 'Song: {1} | Diff: {2} | Ver: {3}').replace('{1}', songName).replace('{2}', Std.string(diff)).replace('{3}', ver);
 		}
 		catch (e:Dynamic)
 		{

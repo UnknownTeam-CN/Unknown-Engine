@@ -245,7 +245,7 @@ class PauseSubState extends MusicBeatSubstate
 					if(errorStr.startsWith('[lime.utils.Assets] ERROR:')) errorStr = 'Missing file: ' + errorStr.substring(errorStr.indexOf(songLowercase), errorStr.length-1); //Missing chart
 					else errorStr += '\n\n' + e.stack;
 
-					missingText.text = 'ERROR WHILE LOADING CHART:\n$errorStr';
+					missingText.text = Language.getPhrase('loading_error_chart', 'ERROR WHILE LOADING CHART:\n{1}').replace('{1}', errorStr);
 					missingText.screenCenter(Y);
 					missingText.visible = true;
 					missingTextBG.visible = true;

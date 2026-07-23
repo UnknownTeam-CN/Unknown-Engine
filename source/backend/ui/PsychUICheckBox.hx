@@ -1,5 +1,7 @@
 package backend.ui;
 
+import backend.Paths;
+
 class PsychUICheckBox extends FlxSpriteGroup
 {
 	public static final CLICK_EVENT = 'checkbox_click';
@@ -21,6 +23,7 @@ class PsychUICheckBox extends FlxSpriteGroup
 		add(box);
 
 		text = new FlxText(box.width + 4, 0, textWid, label);
+		text.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		text.y += box.height/2 - text.height/2;
 		add(text);
 

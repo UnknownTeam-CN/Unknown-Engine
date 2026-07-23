@@ -12,7 +12,7 @@ import options.OptionsState;
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4';
-	public static var UnknownEngineVersion:String = 'Beta 0.1';
+	public static var UnknownEngineVersion:String = '1.0.0 Release';
 	public static var curSelected:Int = 0;
 
 	var menuItems:Array<String> = [
@@ -82,7 +82,7 @@ class MainMenuState extends MusicBeatState
 
 		for (i in 0...menuItems.length)
 		{
-			var text = new FlxText(startX, startY + i * spacing, 0, menuItems[i], 48);
+			var text = new FlxText(startX, startY + i * spacing, 0, Language.getPhrase('menu_${menuKeys[i]}', menuItems[i]), 48);
 			text.setFormat(Paths.font('game_font.ttf'), 48, FlxColor.WHITE, LEFT);
 			text.antialiasing = ClientPrefs.data.antialiasing;
 			text.scrollFactor.set();
@@ -91,17 +91,17 @@ class MainMenuState extends MusicBeatState
 		}
 
 		// Version texts
-		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
+		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, Language.getPhrase('mainmenu_psych_version', "Psych Engine v{1}").replace('{1}', psychEngineVersion), 12);
 		psychVer.scrollFactor.set();
 		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.LIME, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(psychVer);
 
-		var UEVer:FlxText = new FlxText(12, FlxG.height - 64, 0, "Unknown Engine " + UnknownEngineVersion, 12);
+		var UEVer:FlxText = new FlxText(12, FlxG.height - 64, 0, Language.getPhrase('mainmenu_unknown_version', "Unknown Engine {1}").replace('{1}', UnknownEngineVersion), 12);
 		UEVer.scrollFactor.set();
 		UEVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.CYAN, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(UEVer);
 
-		var fnfVer:FlxText = new FlxText(12, FlxG.height - 24, 0, "Friday Night Funkin' v" + Application.current.meta.get('version'), 12);
+		var fnfVer:FlxText = new FlxText(12, FlxG.height - 24, 0, Language.getPhrase('mainmenu_fnf_version', "Friday Night Funkin' v{1}").replace('{1}', Application.current.meta.get('version')), 12);
 		fnfVer.scrollFactor.set();
 		fnfVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);

@@ -150,7 +150,7 @@ class EventMetaNote extends MetaNote
 		updateHitbox();
 
 		eventText = new FlxText(0, 0, 400, '', 12);
-		eventText.setFormat(Paths.font('vcr.ttf'), 12, FlxColor.WHITE, RIGHT);
+		eventText.setFormat(Paths.font('pixel-latin.ttf'), 12, FlxColor.WHITE, RIGHT);
 		eventText.scrollFactor.x = 0;
 		updateEventText();
 	}
@@ -175,14 +175,14 @@ class EventMetaNote extends MetaNote
 		if(events.length == 1)
 		{
 			var event = events[0];
-			eventText.text = 'Event: ${event[0]} ($myTime ms)\nValue 1: ${event[1]}\nValue 2: ${event[2]}';
+			eventText.text = Language.getPhrase('metanote_event_info', 'Event: {1} ({2} ms)\nValue 1: {3}\nValue 2: {4}').replace('{1}', event[0]).replace('{2}', Std.string(myTime)).replace('{3}', event[1]).replace('{4}', event[2]);
 		}
 		else if(events.length > 1)
 		{
 			var eventNames:Array<String> = [for (event in events) event[0]];
-			eventText.text = '${events.length} Events ($myTime ms):\n${eventNames.join(', ')}';
+			eventText.text = Language.getPhrase('metanote_events_list', '{1} Events ({2} ms):\n{3}').replace('{1}', Std.string(events.length)).replace('{2}', Std.string(myTime)).replace('{3}', eventNames.join(', '));
 		}
-		else eventText.text = 'ERROR FAILSAFE';
+		else eventText.text = Language.getPhrase('metanote_error_failsafe', 'ERROR FAILSAFE');
 	}
 
 	override function destroy()

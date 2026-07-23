@@ -109,7 +109,7 @@ class ResultsScreen extends MusicBeatState
 		add(background);
 
 		// 标题 — 直接定位，无入场动画（彩虹效果在 update 中处理）
-		titleText = new FlxText(20, 20, 0, PlayState.isStoryMode ? "Week Cleared!" : "Song Cleared!", 42);
+		titleText = new FlxText(20, 20, 0, PlayState.isStoryMode ? Language.getPhrase('results_week_cleared', 'Week Cleared!') : Language.getPhrase('results_song_cleared', 'Song Cleared!'), 42);
 		titleText.setFormat(Paths.font("vcr.ttf"), 42, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.scrollFactor.set();
 		add(titleText);
@@ -129,16 +129,16 @@ class ResultsScreen extends MusicBeatState
 		add(songTitleText);
 
 		// 成绩文字（左列）— 先隐藏
-		var judgementStr:String = 'Judgements:\n'
-			+ 'Sicks: $sicks\n'
-			+ 'Goods: $goods\n'
-			+ 'Bads: $bads\n'
-			+ 'Shits: $shits\n\n'
-			+ 'Combo Breaks: $songMisses\n'
-			+ 'Highest Combo: $highestCombo\n'
-			+ 'Score: $songScore\n'
-			+ 'Accuracy: ${CoolUtil.floorDecimal(accuracy * 100, 2)}%\n\n'
-			+ 'Letter Rank:\n$letterRank';
+		var judgementStr:String = Language.getPhrase('results_judgements', 'Judgements:') + '\n'
+			+ Language.getPhrase('results_sicks', 'Sicks: {1}', [sicks]) + '\n'
+			+ Language.getPhrase('results_goods', 'Goods: {1}', [goods]) + '\n'
+			+ Language.getPhrase('results_bads', 'Bads: {1}', [bads]) + '\n'
+			+ Language.getPhrase('results_shits', 'Shits: {1}', [shits]) + '\n\n'
+			+ Language.getPhrase('results_combo_breaks', 'Combo Breaks: {1}', [songMisses]) + '\n'
+			+ Language.getPhrase('results_highest_combo', 'Highest Combo: {1}', [highestCombo]) + '\n'
+			+ Language.getPhrase('results_score', 'Score: {1}', [songScore]) + '\n'
+			+ Language.getPhrase('results_accuracy', 'Accuracy: {1}%', [CoolUtil.floorDecimal(accuracy * 100, 2)]) + '\n\n'
+			+ Language.getPhrase('results_letter_rank', 'Letter Rank:') + '\n$letterRank';
 
 		resultText = new FlxText(20, 110, 600, judgementStr, 28);
 		resultText.setFormat(Paths.font("vcr.ttf"), 28, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -185,7 +185,7 @@ class ResultsScreen extends MusicBeatState
 				shitWin = PlayState.instance.ratingsData[3].hitWindow;
 		}
 
-		var msStr:String = '±${Math.floor(sickWin)}ms | ±${Math.floor(goodWin)}ms | ±${Math.floor(badWin)}ms';
+		var msStr:String = Language.getPhrase('results_time_windows', '±{1}ms | ±{2}ms | ±{3}ms').replace('{1}', Std.string(Math.floor(sickWin))).replace('{2}', Std.string(Math.floor(goodWin))).replace('{3}', Std.string(Math.floor(badWin)));
 		msWindowText = new FlxText(0, 0, 0, msStr, 36);
 		msWindowText.setFormat(Paths.font("vcr.ttf"), 36, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		msWindowText.scrollFactor.set();
@@ -195,7 +195,7 @@ class ResultsScreen extends MusicBeatState
 		add(msWindowText);
 
 		// 底部提示 — 先隐藏
-		pressEnterText = new FlxText(FlxG.width - 420, FlxG.height + 50, 0, 'Press ENTER to continue.', 28);
+		pressEnterText = new FlxText(FlxG.width - 420, FlxG.height + 50, 0, Language.getPhrase('results_press_enter', 'Press ENTER to continue.'), 28);
 		pressEnterText.setFormat(Paths.font("vcr.ttf"), 28, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		pressEnterText.scrollFactor.set();
 		pressEnterText.alpha = 0;
@@ -204,7 +204,7 @@ class ResultsScreen extends MusicBeatState
 		// F1 回放提示 — 先隐藏
 		if (!PlayState.loadRep && PlayState.rep != null)
 		{
-			replayHintText = new FlxText(FlxG.width - 420, FlxG.height + 60, 0, 'Press F1 to Watch Replay', 20);
+			replayHintText = new FlxText(FlxG.width - 420, FlxG.height + 60, 0, Language.getPhrase('results_press_f1_replay', 'Press F1 to Watch Replay'), 20);
 			replayHintText.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.GRAY, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			replayHintText.scrollFactor.set();
 			replayHintText.alpha = 0;

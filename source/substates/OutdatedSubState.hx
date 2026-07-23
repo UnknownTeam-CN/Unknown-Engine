@@ -23,15 +23,9 @@ class OutdatedSubState extends MusicBeatSubstate
 		bg.alpha = 0.0;
 		add(bg);
 
+		var curVer:String = MainMenuState.psychEngineVersion;
 		warnText = new FlxText(0, 0, FlxG.width,
-			'Sup bro, looks like you\'re running an outdated version of\nPsych Engine (${MainMenuState.psychEngineVersion})\n
-			-----------------------------------------------\n
-			Press ENTER to update to the latest version ${updateVersion}\n
-			Press ESCAPE to proceed anyway.\n
-			You can disable this warning by unchecking the
-			"Check for Updates" setting in the Options Menu\n
-			-----------------------------------------------\n
-			Thank you for using the Engine!',
+			Language.getPhrase('outdated_warning', 'Sup bro, looks like you\'re running an outdated version of\nPsych Engine ({1})\n\nPlease update to the latest version to prevent issues!\n\nCurrent version: {2}\nLatest version: {3}\n\nPress ACCEPT to proceed anyway.\nPress BACK to check for an update.').replace('{1}', curVer).replace('{2}', curVer).replace('{3}', updateVersion),
 			32);
 		warnText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
 		warnText.scrollFactor.set();

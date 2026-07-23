@@ -13,6 +13,22 @@ class Alphabet extends FlxSpriteGroup
 	public static var GAME_FONT_PATH:String = Paths.font("game_font.ttf");
 	public static var BASE_SIZE:Int = 48;
 
+	// CJK 字体路径 — 用于中/日/韩文字渲染
+	// 优先 simhei(黑体)，备选 NotoSansSC(思源黑体)，均不可用则回退 game_font
+	public static var CJK_FONT_PATH:String = getCJKFontPath();
+	public var useCJKFont:Bool = false;
+
+	static function getCJKFontPath():String
+	{
+		#if sys
+		if (sys.FileSystem.exists("C:/Windows/Fonts/simhei.ttf"))
+			return "C:/Windows/Fonts/simhei.ttf";
+		if (sys.FileSystem.exists("C:/Windows/Fonts/NotoSansSC-VF.ttf"))
+			return "C:/Windows/Fonts/NotoSansSC-VF.ttf";
+		#end
+		return GAME_FONT_PATH;
+	}
+
 	public var text(default, set):String;
 
 	public var bold:Bool = false;
@@ -200,8 +216,19 @@ class Alphabet extends FlxSpriteGroup
 		var rowData:Array<Float> = [];
 		rows = 0;
 
-		// 计算空格宽度 - 使用 "M" 的宽度作为参考
+		// 空格宽度
 		var spaceWidth:Float = getSpaceWidth();
+
+		// 预扫描: 检测是否包含 CJK 字符，决定字体
+		useCJKFont = false;
+		for (i in 0...newText.length)
+		{
+			if (AlphaCharacter.isCJKChar(newText.charAt(i)))
+			{
+				useCJKFont = true;
+				break;
+			}
+		}
 
 		for (i in 0...newText.length)
 		{
@@ -212,7 +239,7 @@ class Alphabet extends FlxSpriteGroup
 				if (spaceChar) consecutiveSpaces++;
 
 				var isAlphabet:Bool = AlphaCharacter.isTypeAlphabet(character.toLowerCase());
-				if (AlphaCharacter.allLetters.exists(character.toLowerCase()) && (!bold || !spaceChar))
+				if ((AlphaCharacter.allLetters.exists(character.toLowerCase()) || AlphaCharacter.isCJKChar(character)) && (!bold || !spaceChar))
 				{
 					if (consecutiveSpaces > 0)
 					{
@@ -310,6 +337,9 @@ class AlphaCharacter extends FlxText
 	public var rowWidth:Float = 0;
 	public var character:String = '?';
 
+	// 跟踪当前字体，避免重复 setFormat 调用
+	var _currentFont:String = null;
+
 	// 兼容旧代码 - image 字段 (现在使用 TTF 字体，不再需要)
 	public var image(default, set):String = '';
 
@@ -350,6 +380,16 @@ class AlphaCharacter extends FlxText
 		{
 			this.character = character;
 
+			// 根据父 Alphabet 的 useCJKFont 标志自动切换字体
+			var targetFont:String = (parent != null && parent.useCJKFont) ? Alphabet.CJK_FONT_PATH : Alphabet.GAME_FONT_PATH;
+
+			if (_currentFont != targetFont)
+			{
+				setFormat(targetFont, Alphabet.BASE_SIZE, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK, true);
+				_currentFont = targetFont;
+				antialiasing = ClientPrefs.data.antialiasing;
+			}
+
 			// 设置文本为字符
 			text = character;
 
@@ -367,6 +407,25 @@ class AlphaCharacter extends FlxText
 			|| (ascii >= 192 && ascii <= 214)
 			|| (ascii >= 216 && ascii <= 246)
 			|| (ascii >= 248 && ascii <= 255);
+	}
+
+	/**
+	 * 判断是否为 CJK (中日韩) 字符
+	 * 覆盖: CJK 统一表意文字、标点、全角字符、假名、谚文
+	 */
+	public static function isCJKChar(c:String):Bool
+	{
+		if (c == null || c.length == 0) return false;
+		var code = StringTools.fastCodeAt(c, 0);
+		return (code >= 0x4E00 && code <= 0x9FFF)       // CJK 统一表意文字 (常用汉字)
+			|| (code >= 0x3400 && code <= 0x4DBF)        // CJK 扩展 A
+			|| (code >= 0xF900 && code <= 0xFAFF)        // CJK 兼容表意文字
+			|| (code >= 0x3000 && code <= 0x303F)        // CJK 标点符号 (。、〃 etc)
+			|| (code >= 0xFF00 && code <= 0xFFEF)        // 全角字符 (！＂ etc)
+			|| (code >= 0x3040 && code <= 0x309F)        // 平假名
+			|| (code >= 0x30A0 && code <= 0x30FF)        // 片假名
+			|| (code >= 0xAC00 && code <= 0xD7AF)        // 韩文音节
+			|| (code >= 0x20000 && code <= 0x2A6DF);     // CJK 扩展 B (生僻字)
 	}
 
 	override public function updateHitbox()

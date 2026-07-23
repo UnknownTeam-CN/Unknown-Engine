@@ -1,6 +1,7 @@
 package backend.ui;
 
 import backend.ui.PsychUIBox.UIStyleData;
+import backend.Paths;
 
 class PsychUIDropDownMenu extends PsychUIInputText
 {
@@ -242,6 +243,7 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 		add(bg);
 
 		text = new FlxText(0, 0, width, 8);
+		text.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		text.color = FlxColor.BLACK;
 		add(text);
 	}

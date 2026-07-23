@@ -65,17 +65,17 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		FlxG.mouse.visible = true;
 
 		var addLineText:FlxText = new FlxText(10, 10, FlxG.width - 20, 'Press O to remove the current dialogue line, Press P to add another line after the current one.', 8);
-		addLineText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		addLineText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		addLineText.scrollFactor.set();
 		add(addLineText);
 
 		selectedText = new FlxText(10, 32, FlxG.width - 20, '', 8);
-		selectedText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectedText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		selectedText.scrollFactor.set();
 		add(selectedText);
 
 		animText = new FlxText(10, 62, FlxG.width - 20, '', 8);
-		animText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		animText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		animText.scrollFactor.set();
 		add(animText);
 		
@@ -106,7 +106,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		characterInputText = new PsychUIInputText(10, 20, 80, DialogueCharacter.DEFAULT_CHARACTER, 8);
 		speedStepper = new PsychUINumericStepper(10, characterInputText.y + 40, 0.005, 0.05, 0, 0.5, 3);
 
-		angryCheckbox = new PsychUICheckBox(speedStepper.x + 120, speedStepper.y, "Angry Textbox", 200);
+		angryCheckbox = new PsychUICheckBox(speedStepper.x + 120, speedStepper.y, Language.getPhrase("dlg_angry_textbox", "Angry Textbox"), 200);
 		angryCheckbox.onClick = function()
 		{
 			updateTextBox();
@@ -125,17 +125,17 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 			else PsychUIInputText.focusOn = null;
 		};
 
-		var loadButton:PsychUIButton = new PsychUIButton(20, lineInputText.y + 25, "Load Dialogue", function() {
+		var loadButton:PsychUIButton = new PsychUIButton(20, lineInputText.y + 25, Language.getPhrase("dlg_load", "Load Dialogue"), function() {
 			loadDialogue();
 		});
-		var saveButton:PsychUIButton = new PsychUIButton(loadButton.x + 120, loadButton.y, "Save Dialogue", function() {
+		var saveButton:PsychUIButton = new PsychUIButton(loadButton.x + 120, loadButton.y, Language.getPhrase("dlg_save", "Save Dialogue"), function() {
 			saveDialogue();
 		});
 
-		tab_group.add(new FlxText(10, speedStepper.y - 18, 0, 'Interval/Speed (ms):'));
-		tab_group.add(new FlxText(10, characterInputText.y - 18, 0, 'Character:'));
-		tab_group.add(new FlxText(10, soundInputText.y - 18, 0, 'Sound file name:'));
-		tab_group.add(new FlxText(10, lineInputText.y - 18, 0, 'Text:'));
+		tab_group.add(new FlxText(10, speedStepper.y - 18, 0, Language.getPhrase('dlg_interval', 'Interval/Speed (ms):')));
+		tab_group.add(new FlxText(10, characterInputText.y - 18, 0, Language.getPhrase('dlg_character', 'Character:')));
+		tab_group.add(new FlxText(10, soundInputText.y - 18, 0, Language.getPhrase('dlg_sound', 'Sound file name:')));
+		tab_group.add(new FlxText(10, lineInputText.y - 18, 0, Language.getPhrase('dlg_text', 'Text:')));
 		tab_group.add(characterInputText);
 		tab_group.add(angryCheckbox);
 		tab_group.add(speedStepper);

@@ -49,14 +49,14 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		add(grpWeekCharacters);
 
 		txtOffsets = new FlxText(20, 10, 0, "[0, 0]", 32);
-		txtOffsets.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
+		txtOffsets.setFormat(Paths.font('pixel-latin.ttf'), 32, FlxColor.WHITE, CENTER);
 		txtOffsets.alpha = 0.7;
 		add(txtOffsets);
 
 		var tipText:FlxText = new FlxText(0, 540, FlxG.width,
 			"Arrow Keys - Change Offset (Hold shift for 10x speed)
 			\nSpace - Play \"Start Press\" animation (Boyfriend Character Type)", 16);
-		tipText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER);
+		tipText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, CENTER);
 		tipText.scrollFactor.set();
 		add(tipText);
 
@@ -81,14 +81,14 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		addCharacterUI();
 		add(UI_mainbox);
 
-		var loadButton:PsychUIButton = new PsychUIButton(0, 480, "Load Character", function() {
+		var loadButton:PsychUIButton = new PsychUIButton(0, 480, Language.getPhrase("menuchar_load", "Load Character"), function() {
 			loadCharacter();
 		});
 		loadButton.screenCenter(X);
 		loadButton.x -= 60;
 		add(loadButton);
 	
-		var saveButton:PsychUIButton = new PsychUIButton(0, 480, "Save Character", function() {
+		var saveButton:PsychUIButton = new PsychUIButton(0, 480, Language.getPhrase("menuchar_save", "Save Character"), function() {
 			saveCharacter();
 		});
 		saveButton.screenCenter(X);
@@ -100,7 +100,7 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 	function addTypeUI() {
 		var tab_group = UI_typebox.getTab('Character Type').menu;
 
-		characterTypeRadio = new PsychUIRadioGroup(10, 20, ['Opponent', 'Boyfriend', 'Girlfriend'], 40);
+		characterTypeRadio = new PsychUIRadioGroup(10, 20, [Language.getPhrase('menuchar_type_opp', 'Opponent'), Language.getPhrase('menuchar_type_bf', 'Boyfriend'), Language.getPhrase('menuchar_type_gf', 'Girlfriend')], 40);
 		characterTypeRadio.checked = 0;
 		characterTypeRadio.onClick = updateCharacters;
 		tab_group.add(characterTypeRadio);
@@ -119,14 +119,14 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		idleInputText = new PsychUIInputText(10, imageInputText.y + 35, 100, characterFile.idle_anim, 8);
 		confirmInputText = new PsychUIInputText(10, idleInputText.y + 35, 100, characterFile.confirm_anim, 8);
 
-		flipXCheckbox = new PsychUICheckBox(10, confirmInputText.y + 30, "Flip X", 100);
+		flipXCheckbox = new PsychUICheckBox(10, confirmInputText.y + 30, Language.getPhrase("menuchar_flip_x", "Flip X"), 100);
 		flipXCheckbox.onClick = function()
 		{
 			grpWeekCharacters.members[characterTypeRadio.checked].flipX = flipXCheckbox.checked;
 			characterFile.flipX = flipXCheckbox.checked;
 		};
 
-		antialiasingCheckbox = new PsychUICheckBox(10, flipXCheckbox.y + 30, "Antialiasing", 100);
+		antialiasingCheckbox = new PsychUICheckBox(10, flipXCheckbox.y + 30, Language.getPhrase("menuchar_antialiasing", "Antialiasing"), 100);
 		antialiasingCheckbox.checked = grpWeekCharacters.members[characterTypeRadio.checked].antialiasing;
 		antialiasingCheckbox.onClick = function()
 		{
@@ -134,16 +134,16 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 			characterFile.antialiasing = antialiasingCheckbox.checked;
 		};
 
-		var reloadImageButton:PsychUIButton = new PsychUIButton(140, confirmInputText.y + 30, "Reload Char", function() {
+		var reloadImageButton:PsychUIButton = new PsychUIButton(140, confirmInputText.y + 30, Language.getPhrase("menuchar_reload", "Reload Char"), function() {
 			reloadSelectedCharacter();
 		});
 		
 		scaleStepper = new PsychUINumericStepper(140, imageInputText.y, 0.05, 1, 0.1, 30, 2);
 
-		var confirmDescText = new FlxText(10, confirmInputText.y - 18, 0, 'Start Press animation on the .XML:');
-		tab_group.add(new FlxText(10, imageInputText.y - 18, 0, 'Image file name:'));
-		tab_group.add(new FlxText(10, idleInputText.y - 18, 0, 'Idle animation on the .XML:'));
-		tab_group.add(new FlxText(scaleStepper.x, scaleStepper.y - 18, 0, 'Scale:'));
+		var confirmDescText = new FlxText(10, confirmInputText.y - 18, 0, Language.getPhrase('menuchar_start_press', 'Start Press animation on the .XML:'));
+		tab_group.add(new FlxText(10, imageInputText.y - 18, 0, Language.getPhrase('menuchar_image_name', 'Image file name:')));
+		tab_group.add(new FlxText(10, idleInputText.y - 18, 0, Language.getPhrase('menuchar_idle_anim', 'Idle animation on the .XML:')));
+		tab_group.add(new FlxText(scaleStepper.x, scaleStepper.y - 18, 0, Language.getPhrase('menuchar_scale', 'Scale:')));
 		tab_group.add(flipXCheckbox);
 		tab_group.add(antialiasingCheckbox);
 		tab_group.add(reloadImageButton);

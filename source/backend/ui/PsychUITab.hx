@@ -2,6 +2,7 @@ package backend.ui;
 
 import flixel.util.FlxDestroyUtil;
 import flixel.math.FlxPoint;
+import backend.Paths;
 
 class PsychUITab extends FlxSprite
 {
@@ -18,6 +19,7 @@ class PsychUITab extends FlxSprite
 
 		@:bypassAccessor this.name = name;
 		text = new FlxText(0, 0, 100, name);
+		text.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		text.alignment = CENTER;
 	}
 

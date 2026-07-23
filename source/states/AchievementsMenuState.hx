@@ -319,8 +319,8 @@ class ResetAchievementSubstate extends MusicBeatSubstate
 				Achievements.achievementsUnlocked.remove(option.name);
 				option.unlocked = false;
 				option.curProgress = 0;
-				option.name = state.nameText.text = '???';
-				if(option.maxProgress > 0) state.progressTxt.text = '0 / ' + option.maxProgress;
+				option.name = state.nameText.text = Language.getPhrase('achievement_unknown', '???');
+				if(option.maxProgress > 0) state.progressTxt.text = Language.getPhrase('achievement_progress', '0 / {1}').replace('{1}', Std.string(option.maxProgress));
 				state.grpOptions.members[state.curSelected].loadGraphic(Paths.image('achievements/lockedachievement'));
 				state.grpOptions.members[state.curSelected].antialiasing = ClientPrefs.data.antialiasing;
 

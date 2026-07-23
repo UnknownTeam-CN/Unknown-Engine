@@ -1,5 +1,7 @@
 package backend.ui;
 
+import backend.Paths;
+
 class PsychUISlider extends FlxSpriteGroup
 {
 	public static final CHANGE_EVENT = "slider_change";
@@ -28,18 +30,22 @@ class PsychUISlider extends FlxSpriteGroup
 		add(bar);
 
 		minText = new FlxText(0, 0, 80, '', 8);
+		minText.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		minText.alignment = CENTER;
 		minText.color = mainColor;
 		add(minText);
 		maxText = new FlxText(0, 0, 80, '', 8);
+		maxText.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		maxText.alignment = CENTER;
 		maxText.color = mainColor;
 		add(maxText);
 		valueText = new FlxText(0, 0, 80, '', 8);
+		valueText.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		valueText.alignment = CENTER;
 		valueText.color = handleColor;
 		add(valueText);
 		labelText = new FlxText(0, 0, wid, '', 8);
+		labelText.setFormat(Paths.font('pixel-latin.ttf'), 8);
 		labelText.alignment = CENTER;
 		add(labelText);
 

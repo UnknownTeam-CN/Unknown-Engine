@@ -48,13 +48,13 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 		bg.cameras = cameras;
 		add(bg);
 
-		var titleText:FlxText = new FlxText(0, bg.y + 30, 400, 'Preload List', 24);
+		var titleText:FlxText = new FlxText(0, bg.y + 30, 400, Language.getPhrase('preload_title', 'Preload List'), 24);
 		titleText.screenCenter(X);
 		titleText.alignment = CENTER;
 		titleText.cameras = cameras;
 		add(titleText);
 
-		var btn:PsychUIButton = new PsychUIButton(bg.x + bg.width - 40, bg.y, 'X', close, 40);
+		var btn:PsychUIButton = new PsychUIButton(bg.x + bg.width - 40, bg.y, Language.getPhrase('preload_close', 'X'), close, 40);
 		btn.cameras = cameras;
 		add(btn);
 		
@@ -65,7 +65,7 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 		outputTxt.alpha = 0;
 		add(outputTxt);
 
-		removeButton = new PsychUIButton(0, 0, 'X', function()
+		removeButton = new PsychUIButton(0, 0, Language.getPhrase('preload_close', 'X'), function()
 		{
 			if(radioGrp.checked < 0) return;
 
@@ -93,9 +93,9 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 			if(smCheckBox.checked) filters |= STORY_MODE;
 			preloadList.set(name, filters);
 		}
-		lqCheckBox = new PsychUICheckBox(bg.x + bg.width - 100, bg.y + bg.height - 130, 'Low Qual.', 0, updateFilters);
-		hqCheckBox = new PsychUICheckBox(lqCheckBox.x, lqCheckBox.y + 22, 'High Qual.', 0, updateFilters);
-		smCheckBox = new PsychUICheckBox(hqCheckBox.x, hqCheckBox.y + 22, 'Story Mode', 0, updateFilters);
+		lqCheckBox = new PsychUICheckBox(bg.x + bg.width - 100, bg.y + bg.height - 130, Language.getPhrase('preload_low_qual', 'Low Qual.'), 0, updateFilters);
+		hqCheckBox = new PsychUICheckBox(lqCheckBox.x, lqCheckBox.y + 22, Language.getPhrase('preload_high_qual', 'High Qual.'), 0, updateFilters);
+		smCheckBox = new PsychUICheckBox(hqCheckBox.x, hqCheckBox.y + 22, Language.getPhrase('preload_story', 'Story Mode'), 0, updateFilters);
 		lqCheckBox.cameras = cameras;
 		hqCheckBox.cameras = cameras;
 		smCheckBox.cameras = cameras;
@@ -149,11 +149,11 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 			else showOutput('File is not inside Psych Engine\'s folder!', true);
 		}
 
-		var loadFileBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, 'Load File', function()
+		var loadFileBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, Language.getPhrase('preload_load_file', 'Load File'), function()
 		{
 			if(!fileDialog.completed) return;
 			
-			fileDialog.open(null, 'Load a .PNG/.OGG File...', [#if !mac new FileFilter('Image/Audio', '*.png;*.ogg') #end], function()
+			fileDialog.open(null, Language.getPhrase('preload_dialog_file', 'Load a .PNG/.OGG File...'), [#if !mac new FileFilter('Image/Audio', '*.png;*.ogg') #end], function()
 			{
 				var path:Path = new Path(fileDialog.path.replace('\\', '/'));
 	
@@ -174,11 +174,11 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 		loadFileBtn.x -= 120;
 		add(loadFileBtn);
 
-		var loadFolderBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, 'Load Folder', function()
+		var loadFolderBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, Language.getPhrase('preload_load_folder', 'Load Folder'), function()
 		{
 			if(!fileDialog.completed) return;
 
-			fileDialog.openDirectory('Load a folder...', function()
+			fileDialog.openDirectory(Language.getPhrase('preload_dialog_folder', 'Load a folder...'), function()
 			{
 				addToList(new Path(fileDialog.path.replace('\\', '/')), true);
 			});
@@ -187,7 +187,7 @@ class PreloadListSubState extends MusicBeatSubstate implements PsychUIEvent
 		loadFolderBtn.cameras = cameras;
 		add(loadFolderBtn);
 
-		var saveBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, 'Save', function()
+		var saveBtn:PsychUIButton = new PsychUIButton(0, bg.y + bg.height - 40, Language.getPhrase('preload_save', 'Save'), function()
 		{
 			if(!fileDialog.completed) return;
 

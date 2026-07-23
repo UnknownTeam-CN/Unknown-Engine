@@ -40,7 +40,7 @@ class WeekEditorState extends MusicBeatState implements PsychUIEventHandler.Psyc
 
 	override function create() {
 		txtWeekTitle = new FlxText(FlxG.width * 0.7, 10, 0, "", 32);
-		txtWeekTitle.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, RIGHT);
+		txtWeekTitle.setFormat(Paths.font('pixel-latin.ttf'), 32, FlxColor.WHITE, RIGHT);
 		txtWeekTitle.alpha = 0.7;
 		
 		var ui_tex = Paths.getSparrowAtlas('campaign_menu_UI_assets');
@@ -66,7 +66,7 @@ class WeekEditorState extends MusicBeatState implements PsychUIEventHandler.Psyc
 		add(lock);
 		
 		missingFileText = new FlxText(0, 0, FlxG.width, "");
-		missingFileText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		missingFileText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		missingFileText.borderSize = 2;
 		missingFileText.visible = false;
 		add(missingFileText); 
@@ -89,7 +89,7 @@ class WeekEditorState extends MusicBeatState implements PsychUIEventHandler.Psyc
 
 		txtTracklist = new FlxText(FlxG.width * 0.05, tracksSprite.y + 60, 0, "", 32);
 		txtTracklist.alignment = CENTER;
-		txtTracklist.font = Paths.font("vcr.ttf");
+		txtTracklist.font = Paths.font('pixel-latin.ttf');
 		txtTracklist.color = 0xFFe55777;
 		add(txtTracklist);
 		add(txtWeekTitle);
@@ -166,12 +166,12 @@ class WeekEditorState extends MusicBeatState implements PsychUIEventHandler.Psyc
 			unsavedProgress = true;
 		};
 
-		tab_group.add(new FlxText(songsInputText.x, songsInputText.y - 18, 0, 'Songs:'));
-		tab_group.add(new FlxText(opponentInputText.x, opponentInputText.y - 18, 0, 'Characters:'));
-		tab_group.add(new FlxText(backgroundInputText.x, backgroundInputText.y - 18, 0, 'Background Asset:'));
-		tab_group.add(new FlxText(displayNameInputText.x, displayNameInputText.y - 18, 0, 'Display Name:'));
-		tab_group.add(new FlxText(weekNameInputText.x, weekNameInputText.y - 18, 0, 'Week Name (for Reset Score Menu):'));
-		tab_group.add(new FlxText(weekFileInputText.x, weekFileInputText.y - 18, 0, 'Week File:'));
+		tab_group.add(new FlxText(songsInputText.x, songsInputText.y - 18, 0, Language.getPhrase('week_songs', 'Songs:')));
+		tab_group.add(new FlxText(opponentInputText.x, opponentInputText.y - 18, 0, Language.getPhrase('week_characters', 'Characters:')));
+		tab_group.add(new FlxText(backgroundInputText.x, backgroundInputText.y - 18, 0, Language.getPhrase('week_bg_asset', 'Background Asset:')));
+		tab_group.add(new FlxText(displayNameInputText.x, displayNameInputText.y - 18, 0, Language.getPhrase('week_display_name', 'Display Name:')));
+		tab_group.add(new FlxText(weekNameInputText.x, weekNameInputText.y - 18, 0, Language.getPhrase('week_week_name', 'Week Name (for Reset Score Menu):')));
+		tab_group.add(new FlxText(weekFileInputText.x, weekFileInputText.y - 18, 0, Language.getPhrase('week_week_file', 'Week File:')));
 
 		tab_group.add(songsInputText);
 		tab_group.add(opponentInputText);
@@ -214,7 +214,7 @@ class WeekEditorState extends MusicBeatState implements PsychUIEventHandler.Psyc
 		difficultiesInputText = new PsychUIInputText(10, weekBeforeInputText.y + 60, 200, '', 8);
 		
 		tab_group.add(new FlxText(weekBeforeInputText.x, weekBeforeInputText.y - 28, 0, 'Week File name of the Week you have\nto finish for Unlocking:'));
-		tab_group.add(new FlxText(difficultiesInputText.x, difficultiesInputText.y - 20, 0, 'Difficulties:'));
+		tab_group.add(new FlxText(difficultiesInputText.x, difficultiesInputText.y - 20, 0, Language.getPhrase('week_difficulties', 'Difficulties:')));
 		tab_group.add(new FlxText(difficultiesInputText.x, difficultiesInputText.y + 20, 0, 'Default difficulties are "Easy, Normal, Hard"\nwithout quotes.'));
 		tab_group.add(weekBeforeInputText);
 		tab_group.add(difficultiesInputText);
@@ -696,8 +696,8 @@ class WeekEditorFreeplayState extends MusicBeatState implements PsychUIEventHand
 			WeekEditorState.unsavedProgress = true;
 		};
 		
-		tab_group.add(new FlxText(10, bgColorStepperR.y - 18, 0, 'Selected background Color R/G/B:'));
-		tab_group.add(new FlxText(10, iconInputText.y - 18, 0, 'Selected icon:'));
+		tab_group.add(new FlxText(10, bgColorStepperR.y - 18, 0, Language.getPhrase('week_selected_bg', 'Selected background Color R/G/B:')));
+		tab_group.add(new FlxText(10, iconInputText.y - 18, 0, Language.getPhrase('week_selected_icon', 'Selected icon:')));
 		tab_group.add(bgColorStepperR);
 		tab_group.add(bgColorStepperG);
 		tab_group.add(bgColorStepperB);
