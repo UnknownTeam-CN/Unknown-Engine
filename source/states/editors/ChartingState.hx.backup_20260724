@@ -170,19 +170,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		['Set Property', "Value 1: Variable name\nValue 2: New value"],
 
-		['Play Sound', "Value 1: Sound file name\nValue 2: Volume (Default: 1), ranges from 0 to 1"],
-
-		['Silhouette', "Shadow silhouette effect (like Indie Cross / Mind Games).\nValue 1: 'a' = enable (BG white, chars/HUD black), 'b' = disable (restore)\nValue 2: Fade duration in seconds (Default: 1.0)"],
-
-		['Shader', "Apply a runtime shader to camGame.\nValue 1: Shader name (frag filename without .frag)\nValue 2: 1/0 = Enable/Disable\nIf Value 1 is empty, removes ALL active event shaders"],
-
-		['Lyric2', "Display lyrics on screen with fade in/out animation.\nValue 1: Text to show (leave empty to hide/dismiss current lyrics)\nCreated by Avis."],
-
-		['Lyric2 Color', "Change text color for Lyric2.\nValue 1: Hex color (e.g. ff0000 = red). Leave empty for white.\nCreated by Avis."],
-
-		['Lyric - Set Text', "Display lyrics on screen with fade in/out animation (alternate position).\nValue 1: Text to show (leave empty to hide/dismiss current lyrics)\nCreated by Avis."],
-
-		['Lyric - Set Color', "Change text color for Lyric - Set Text.\nValue 1: Hex color (e.g. ff0000 = red). Leave empty for white.\nCreated by Avis."]
+		['Play Sound', "Value 1: Sound file name\nValue 2: Volume (Default: 1), ranges from 0 to 1"]
 
 	];
 

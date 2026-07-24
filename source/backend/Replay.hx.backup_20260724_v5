@@ -68,7 +68,7 @@ class Replay
 		this.path = path;
 		replay = {
 			replayGameVer: version,
-			timestamp: Std.string(Date.now().getTime()),
+			timestamp: Date.now().toString(),
 			songName: "No Song Found",
 			songId: "",
 			songDiff: 0,
@@ -95,7 +95,7 @@ class Replay
 	{
 		var json:ReplayJSON = {
 			replayGameVer: version,
-			timestamp: Std.string(Date.now().getTime()),
+			timestamp: Date.now().toString(),
 			songName: songName,
 			songId: songId,
 			songDiff: diff,
@@ -127,14 +127,15 @@ class Replay
 	}
 
 	// Unknown Engine: 生成回放 JSON 文件路径
-	// 路径格式: replays/jsons/songname/ue_timestamp_songname_diff.json
+	// 路径格式: replays/jsons/songname/ue_YYYY-MM-DD_songname_diff.json
 	public static function makeReplayPath(songName:String, diff:Int):String
 	{
-		var timestamp:Float = Date.now().getTime();
+		var now:Date = Date.now();
+		var dateStr:String = DateTools.format(now, "%Y-%m-%d");
 		var diffs:Array<String> = ['easy', 'normal', 'hard'];
 		var diffStr:String = (diff >= 0 && diff < diffs.length) ? diffs[diff] : 'normal';
 		var songLower:String = Paths.formatToSongPath(songName);
-		return 'replays/jsons/$songLower/ue_${timestamp}_${songLower}_${diffStr}.json';
+		return 'replays/jsons/$songLower/ue_${dateStr}_${songLower}_${diffStr}.json';
 	}
 
 	// Unknown Engine: 保存帧级按键数据到 JSON 文件

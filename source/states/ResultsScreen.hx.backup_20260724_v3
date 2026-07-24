@@ -120,13 +120,9 @@ class ResultsScreen extends MusicBeatState
 		scoreScrambleText.scrollFactor.set();
 		add(scoreScrambleText);
 
-		// 名称 — 先隐藏，打乱结束后显示（Story Mode 显示 Week 名称，Freeplay 显示歌曲名）
-		var displayName:String;
-		if (PlayState.isStoryMode)
-			displayName = (PlayState.storyWeekName != null && PlayState.storyWeekName != "") ? PlayState.storyWeekName : "Week";
-		else
-			displayName = PlayState.SONG != null ? PlayState.SONG.song : "Unknown";
-		songTitleText = new FlxText(20, 60, 0, displayName, 32);
+		// 歌曲名称 — 先隐藏，打乱结束后显示
+		var songName:String = PlayState.SONG != null ? PlayState.SONG.song : "Unknown";
+		songTitleText = new FlxText(20, 60, 0, songName, 32);
 		songTitleText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.GRAY, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		songTitleText.scrollFactor.set();
 		songTitleText.alpha = 0;

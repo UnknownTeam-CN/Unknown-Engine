@@ -263,19 +263,10 @@ class PlayState extends MusicBeatState
 	public var replayInputIndex:Int = 0;                      
 	public static var beatHitData:Array<Array<Dynamic>> = [];
 
-	// Silhouette event state — Lua-style: white overlay + char/HUD color tween
+	// Silhouette event state
 	public static var silhouetteActive:Bool = false;
-	public var silhouetteWhiteBg:FlxSprite = null;
-
-	// Lyric event state — native integration of Avis's Lyric2 & Lyric scripts
-	// lyric2Text: for 'Lyric2' event, lyricText: for 'Lyric - Set Text' event
-	public var lyric2Text:FlxText = null;
-	public var lyricText:FlxText = null;
-	public static var lyric2Y:Float = 0;  // rest position for Lyric2
-	public static var lyricTextY:Float = 0; // rest position for Lyric - Set Text
-
-	// Shader event state — tracks active runtime shaders applied via event
-	public static var activeShaderEvents:Map<String, {shader: shaders.ErrorHandledShader.ErrorHandledRuntimeShader, filter: openfl.filters.ShaderFilter}> = new Map();
+	public var silhouetteCharTweens:Array<FlxTween> = [];
+	public var silhouetteBgTweens:Array<FlxTween> = [];
 
 	// ResultsScreen
 	public static var resultsData:ResultsData = null;
@@ -2441,247 +2432,91 @@ class PlayState extends MusicBeatState
 				FlxG.sound.play(Paths.sound(value1), flValue2);
 
 			case 'Silhouette':
-				// Lua-style implementation: white overlay alpha tween + char/HUD color tween
-				// Value 1: 'a' = enable (BG white, chars/HUD black), 'b' = disable (restore)
-				//          Also supports '1'/'0' and 'true'/'false'
-				// Value 2: fade duration in seconds (default 1.0)
-				var v1:String = (value1 != null) ? value1.trim().toLowerCase() : '';
+				var enable:Bool = (value1 == '1' || value1.toLowerCase() == 'true');
 				var duration:Float = (flValue2 != null && flValue2 > 0) ? flValue2 : 1.0;
-				duration /= playbackRate;
+				duration /= playbackRate; // compensate for playback speed
 
-				var enable:Bool = (v1 == 'a' || v1 == '1' || v1 == 'true');
-				var disable:Bool = (v1 == 'b' || v1 == '0' || v1 == 'false');
-				if (!enable && !disable) return;
+				// cancel any existing silhouette tweens
+				for (twn in silhouetteCharTweens) if (twn != null) twn.cancel();
+				for (twn in silhouetteBgTweens) if (twn != null) twn.cancel();
+				silhouetteCharTweens = [];
+				silhouetteBgTweens = [];
 
-				// Create white overlay sprite if not yet created
-				if (silhouetteWhiteBg == null)
+				silhouetteActive = enable;
+				var charTargetColor:FlxColor = enable ? FlxColor.BLACK : FlxColor.TRANSPARENT; // TRANSPARENT = no color filter
+				var bgTargetColor:FlxColor = enable ? FlxColor.WHITE : FlxColor.TRANSPARENT;
+
+				// Characters: dad, boyfriend, gf → fade to black
+				var charGroups:Array<FlxSpriteGroup> = [dadGroup, boyfriendGroup];
+				if (gfGroup != null && gfGroup.members.length > 0) charGroups.push(gfGroup);
+
+				for (group in charGroups)
 				{
-					silhouetteWhiteBg = new FlxSprite().makeGraphic(Std.int(FlxG.width * 2), Std.int(FlxG.height * 2), FlxColor.WHITE);
-					silhouetteWhiteBg.scrollFactor.set(0, 0);
-					silhouetteWhiteBg.alpha = 0;
-					silhouetteWhiteBg.screenCenter();
-					// Insert before first character group so chars are drawn on top
-					var insertIdx:Int = -1;
-					for (grp in [gfGroup, dadGroup, boyfriendGroup])
+					if (group == null) continue;
+					for (member in group.members)
 					{
-						if (grp != null)
+						if (member == null || !member.visible) continue;
+						var spr:FlxSprite = cast member;
+						if (duration <= 0.001)
+							spr.color = charTargetColor;
+						else
 						{
-							var idx:Int = members.indexOf(grp);
-							if (idx >= 0) { insertIdx = idx; break; }
+							var fromColor:FlxColor = spr.color;
+							var twn:FlxTween = FlxTween.color(spr, duration, fromColor, charTargetColor,
+								{ease: FlxEase.linear, onComplete: function(t:FlxTween) { silhouetteCharTweens.remove(t); }});
+							silhouetteCharTweens.push(twn);
 						}
 					}
-					if (insertIdx >= 0)
-						insert(insertIdx, silhouetteWhiteBg);
-					else
-						add(silhouetteWhiteBg); // fallback: add at end
 				}
 
-				// Cancel any existing silhouette tweens on affected objects
-				FlxTween.cancelTweensOf(silhouetteWhiteBg, ["alpha"]);
-				FlxTween.cancelTweensOf(boyfriend, ["color"]);
-				FlxTween.cancelTweensOf(dad, ["color"]);
-				if (gf != null) FlxTween.cancelTweensOf(gf, ["color"]);
-				FlxTween.cancelTweensOf(iconP1, ["color"]);
-				FlxTween.cancelTweensOf(iconP2, ["color"]);
-				if (healthBar != null)
+				// BG sprites: everything in PlayState members that is NOT a character group or UI group → fade to white
+				var excludedGroups:Array<Dynamic> = [dadGroup, boyfriendGroup, gfGroup, comboGroup, uiGroup, noteGroup, luaDebugGroup, camFollow, grpNoteSplashes, strumLineNotes];
+				for (member in members)
 				{
-					FlxTween.cancelTweensOf(healthBar.bg, ["color"]);
-					FlxTween.cancelTweensOf(healthBar.leftBar, ["color"]);
-					FlxTween.cancelTweensOf(healthBar.rightBar, ["color"]);
-				}
-
-				if (enable)
-				{
-					silhouetteActive = true;
-					// White overlay: fade in to cover BG
-					FlxTween.tween(silhouetteWhiteBg, {alpha: 1}, duration, {ease: FlxEase.linear});
-					// Characters: fade to black silhouette
-					FlxTween.color(boyfriend, duration, boyfriend.color, FlxColor.BLACK, {ease: FlxEase.linear});
-					FlxTween.color(dad, duration, dad.color, FlxColor.BLACK, {ease: FlxEase.linear});
-					if (gf != null) FlxTween.color(gf, duration, gf.color, FlxColor.BLACK, {ease: FlxEase.linear});
-					// HUD icons: fade to black
-					FlxTween.color(iconP1, duration, iconP1.color, FlxColor.BLACK, {ease: FlxEase.linear});
-					FlxTween.color(iconP2, duration, iconP2.color, FlxColor.BLACK, {ease: FlxEase.linear});
-					// Health bar: fade all parts to black
-					if (healthBar != null)
+					if (member == null) continue;
+					// skip if it's one of the excluded groups/objects
+					var skip:Bool = false;
+					for (ex in excludedGroups)
 					{
-						FlxTween.color(healthBar.bg, duration, healthBar.bg.color, FlxColor.BLACK, {ease: FlxEase.linear});
-						FlxTween.color(healthBar.leftBar, duration, healthBar.leftBar.color, FlxColor.BLACK, {ease: FlxEase.linear});
-						FlxTween.color(healthBar.rightBar, duration, healthBar.rightBar.color, FlxColor.BLACK, {ease: FlxEase.linear});
+						if (ex != null && member == ex) { skip = true; break; }
 					}
-				}
-				else // disable
-				{
-					silhouetteActive = false;
-					// White overlay: fade out
-					FlxTween.tween(silhouetteWhiteBg, {alpha: 0}, duration, {ease: FlxEase.linear});
-					// Characters: restore (WHITE = no color tint)
-					FlxTween.color(boyfriend, duration, boyfriend.color, FlxColor.WHITE, {ease: FlxEase.linear});
-					FlxTween.color(dad, duration, dad.color, FlxColor.WHITE, {ease: FlxEase.linear});
-					if (gf != null) FlxTween.color(gf, duration, gf.color, FlxColor.WHITE, {ease: FlxEase.linear});
-					// HUD icons: restore
-					FlxTween.color(iconP1, duration, iconP1.color, FlxColor.WHITE, {ease: FlxEase.linear});
-					FlxTween.color(iconP2, duration, iconP2.color, FlxColor.WHITE, {ease: FlxEase.linear});
-					// Health bar bg: restore (shows original image)
-					if (healthBar != null)
+					if (skip) continue;
+
+					// only process FlxSprite (and FlxGroup that is NOT a character group)
+					if (Std.isOfType(member, FlxSprite))
 					{
-						FlxTween.color(healthBar.bg, duration, healthBar.bg.color, FlxColor.WHITE, {ease: FlxEase.linear});
-						// leftBar/rightBar: tween to WHITE, then reload proper colors via onComplete
-						FlxTween.color(healthBar.leftBar, duration, healthBar.leftBar.color, FlxColor.WHITE,
-							{ease: FlxEase.linear, onComplete: function(t:FlxTween) { reloadHealthBarColors(); }});
-						FlxTween.color(healthBar.rightBar, duration, healthBar.rightBar.color, FlxColor.WHITE,
-							{ease: FlxEase.linear});
-					}
-				}
-
-			case 'Lyric2':
-				// Display lyrics with fade in/out (from Avis's Lyric2.lua)
-				// Value 1: text to show (empty = hide)
-				var fadeTime:Float = Conductor.crochet / 1500;
-				var yOff:Float = 50;
-
-				if (lyric2Text == null)
-				{
-					lyric2Y = ClientPrefs.data.downScroll ? 570 : 520;
-					lyric2Text = new FlxText(-50, lyric2Y, 1000, "", 34);
-					lyric2Text.setFormat(Paths.font("vcr.ttf"), 34, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-					lyric2Text.borderSize = 2;
-					lyric2Text.scrollFactor.set();
-					lyric2Text.alpha = 0;
-					add(lyric2Text);
-				}
-
-				FlxTween.cancelTweensOf(lyric2Text, ["y", "alpha"]);
-
-				if (value1 != null && value1 != '')
-				{
-					// Show text: start from below + fade in
-					lyric2Text.y = lyric2Y + yOff;
-					lyric2Text.alpha = 0;
-					lyric2Text.text = value1;
-					FlxTween.tween(lyric2Text, {y: lyric2Y}, fadeTime * 2, {ease: FlxEase.quadOut});
-					FlxTween.tween(lyric2Text, {alpha: 1}, fadeTime * 2, {ease: FlxEase.quadOut});
-				}
-				else
-				{
-					// Hide text: move down + fade out
-					FlxTween.tween(lyric2Text, {y: lyric2Text.y + yOff}, fadeTime, {ease: FlxEase.quadIn});
-					FlxTween.tween(lyric2Text, {alpha: 0}, fadeTime, {ease: FlxEase.quadIn});
-				}
-
-			case 'Lyric - Set Text':
-				// Display lyrics with fade in/out (from Avis's Lyric - Set Text.lua)
-				// Value 1: text to show (empty = hide)
-				var fadeTime:Float = Conductor.crochet / 1500;
-				var yOff:Float = 50;
-
-				if (lyricText == null)
-				{
-					lyricTextY = ClientPrefs.data.downScroll ? 520 : 560;
-					lyricText = new FlxText(-50, lyricTextY, 1000, "", 34);
-					lyricText.setFormat(Paths.font("vcr.ttf"), 34, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-					lyricText.borderSize = 2;
-					lyricText.scrollFactor.set();
-					lyricText.alpha = 0;
-					add(lyricText);
-				}
-
-				FlxTween.cancelTweensOf(lyricText, ["y", "alpha"]);
-
-				if (value1 != null && value1 != '')
-				{
-					// Show text: start from below + fade in
-					lyricText.y = lyricTextY + yOff;
-					lyricText.alpha = 0;
-					lyricText.text = value1;
-					FlxTween.tween(lyricText, {y: lyricTextY}, fadeTime * 2, {ease: FlxEase.quadOut});
-					FlxTween.tween(lyricText, {alpha: 1}, fadeTime * 2, {ease: FlxEase.quadOut});
-				}
-				else
-				{
-					// Hide text: move down + fade out
-					FlxTween.tween(lyricText, {y: lyricText.y + yOff}, fadeTime, {ease: FlxEase.quadIn});
-					FlxTween.tween(lyricText, {alpha: 0}, fadeTime, {ease: FlxEase.quadIn});
-				}
-
-			case 'Lyric2 Color':
-				// Change color of Lyric2 text (from Avis's Lyric2 Color.lua)
-				// Value 1: hex color string (e.g. "ff0000"), empty = white
-				if (lyric2Text != null)
-				{
-					var colorStr:String = (value1 != null) ? value1.trim() : '';
-					if (colorStr == '')
-						lyric2Text.color = FlxColor.WHITE;
-					else
-						lyric2Text.color = FlxColor.fromString('#' + colorStr);
-				}
-
-			case 'Lyric - Set Color':
-				// Change color of Lyric - Set Text text (from Avis's Lyric - Set Color.lua)
-				// Value 1: hex color string (e.g. "ff0000"), empty = white
-				if (lyricText != null)
-				{
-					var colorStr:String = (value1 != null) ? value1.trim() : '';
-					if (colorStr == '')
-						lyricText.color = FlxColor.WHITE;
-					else
-						lyricText.color = FlxColor.fromString('#' + colorStr);
-				}
-
-			case 'Shader':
-				#if (!flash && sys)
-				var shaderName:String = (value1 != null) ? value1.trim() : '';
-				var enable:Bool = (value2 == '1' || (value2 != null && value2.toLowerCase() == 'true'));
-
-				// If value1 is empty, remove ALL active event shaders regardless of value2
-				if (shaderName.length <= 0)
-				{
-					for (key in activeShaderEvents.keys())
-					{
-						var entry = activeShaderEvents.get(key);
-						if (entry != null)
+						var spr:FlxSprite = cast member;
+						if (!spr.visible) continue;
+						if (duration <= 0.001)
+							spr.color = bgTargetColor;
+						else
 						{
-							removeShaderFromCamera(entry.filter);
-							activeShaderEvents.remove(key);
+							var fromColor:FlxColor = spr.color;
+							var twn:FlxTween = FlxTween.color(spr, duration, fromColor, bgTargetColor,
+								{ease: FlxEase.linear, onComplete: function(t:FlxTween) { silhouetteBgTweens.remove(t); }});
+							silhouetteBgTweens.push(twn);
 						}
 					}
-					return;
-				}
-
-				if (enable)
-				{
-					// Enable shader: init it if needed, then apply to camGame
-					if (!runtimeShaders.exists(shaderName) && !initLuaShader(shaderName))
+					else if (Std.isOfType(member, FlxGroup))
 					{
-						FlxG.log.warn('Shader event: Shader "$shaderName" is missing!');
-						return;
-					}
-
-					// If already active, skip
-					if (activeShaderEvents.exists(shaderName))
-						return;
-
-					var arr:Array<String> = runtimeShaders.get(shaderName);
-					var shaderObj:shaders.ErrorHandledShader.ErrorHandledRuntimeShader = new shaders.ErrorHandledShader.ErrorHandledRuntimeShader(shaderName, arr[0], arr[1]);
-					var filterObj:openfl.filters.ShaderFilter = new openfl.filters.ShaderFilter(shaderObj);
-					activeShaderEvents.set(shaderName, {shader: shaderObj, filter: filterObj});
-
-					addShaderToCamera(filterObj);
-				}
-				else
-				{
-					// Disable specific shader
-					if (activeShaderEvents.exists(shaderName))
-					{
-						var entry = activeShaderEvents.get(shaderName);
-						if (entry != null)
-							removeShaderFromCamera(entry.filter);
-						activeShaderEvents.remove(shaderName);
+						// iterate group members for nested stage groups
+						var grp:FlxGroup = cast member;
+						grp.forEachOfType(FlxSprite, function(spr:FlxSprite)
+						{
+							if (!spr.visible) return;
+							if (duration <= 0.001)
+								spr.color = bgTargetColor;
+							else
+							{
+								var fromColor:FlxColor = spr.color;
+								var twn:FlxTween = FlxTween.color(spr, duration, fromColor, bgTargetColor,
+									{ease: FlxEase.linear, onComplete: function(t:FlxTween) { silhouetteBgTweens.remove(t); }});
+								silhouetteBgTweens.push(twn);
+							}
+						});
 					}
 				}
-				#else
-				FlxG.log.warn('Shader event: Platform unsupported for Runtime Shaders!');
-				#end
+
 		}
 
 		stagesFunc(function(stage:BaseStage) stage.eventCalled(eventName, value1, value2, flValue1, flValue2, strumTime));
@@ -3777,10 +3612,6 @@ class PlayState extends MusicBeatState
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 
 		FlxG.camera.setFilters([]);
-		activeShaderEvents.clear(); // cleanup shader event state
-		silhouetteActive = false; // cleanup silhouette event state
-		lyric2Text = null; // cleanup lyric2 event state
-		lyricText = null;  // cleanup lyric text event state
 
 		#if FLX_PITCH FlxG.sound.music.pitch = 1; #end
 		FlxG.animationTimeScale = 1;
@@ -4191,43 +4022,6 @@ class PlayState extends MusicBeatState
 		return null;
 		#end
 	}
-
-	#if (!flash && sys)
-	/**
-	 * Adds a ShaderFilter to camGame's filter list.
-	 * Preserves any existing filters (e.g. from stage scripts).
-	 */
-	function addShaderToCamera(filterObj:openfl.filters.ShaderFilter)
-	{
-		if (camGame == null) return;
-		var currentFilters:Array<openfl.filters.BitmapFilter> = [];
-		if (camGame.filters != null)
-		{
-			for (f in camGame.filters)
-				currentFilters.push(f);
-		}
-		currentFilters.push(filterObj);
-		camGame.setFilters(currentFilters);
-	}
-
-	/**
-	 * Removes a specific ShaderFilter from camGame's filter list.
-	 */
-	function removeShaderFromCamera(filterObj:openfl.filters.ShaderFilter)
-	{
-		if (camGame == null) return;
-		var currentFilters:Array<openfl.filters.BitmapFilter> = [];
-		if (camGame.filters != null)
-		{
-			for (f in camGame.filters)
-			{
-				if (f != cast filterObj)
-					currentFilters.push(f);
-			}
-		}
-		camGame.setFilters(currentFilters.length > 0 ? currentFilters : null);
-	}
-	#end
 
 	public function initLuaShader(name:String, ?glslVersion:Int = 120)
 	{

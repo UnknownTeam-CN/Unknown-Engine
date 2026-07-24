@@ -92,7 +92,7 @@ echo ========================================
 echo       Build x64 Release
 echo ========================================
 echo.
-pushd "%SCRIPT_DIR%..\.."
+pushd "%SCRIPT_DIR%.\."
 echo BUILDING GAME
 haxelib run lime build windows -release
 echo.
@@ -109,7 +109,7 @@ echo ========================================
 echo       Build x64 Debug
 echo ========================================
 echo.
-pushd "%SCRIPT_DIR%..\.."
+pushd "%SCRIPT_DIR%.\."
 echo BUILDING GAME
 haxelib run lime build windows -debug
 echo.
@@ -126,7 +126,7 @@ echo ========================================
 echo       Build x32 Release
 echo ========================================
 echo.
-pushd "%SCRIPT_DIR%..\.."
+pushd "%SCRIPT_DIR%.\."
 echo BUILDING GAME
 haxelib run lime build windows -32 -release -D 32bits -D HXCPP_M32
 echo.
