@@ -2,7 +2,7 @@
 A Engine based on PsychEngine 1.0.4
 # Intro
 This engine is managed to make mod dev more easier with less change of original stuffs, diffrent from other engine, we allow you guys to modify, republish, well, Apache 2.0 you know,
-We provide the build script and all in one build script(made by me)
+We provide the build script and all in one build script(made by me), please remember credit us...(just don't remove us and every contributers in credits)
 # Something
 This engine is a kind of...unstable
 You know, ever changes may cause some bug so we need anyone to help this project
