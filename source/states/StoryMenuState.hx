@@ -310,9 +310,13 @@ class StoryMenuState extends MusicBeatState
 			// Nevermind that's stupid lmao
 			try
 			{
-				PlayState.storyPlaylist = songArray;
-				PlayState.isStoryMode = true;
-				selectedWeek = true;
+			PlayState.storyPlaylist = songArray;
+			PlayState.isStoryMode = true;
+			selectedWeek = true;
+
+			// 清理回放状态，确保正常游玩不被残留的 loadRep 影响
+			PlayState.loadRep = false;
+			PlayState.rep = null;
 
 				// 保存 Week 名称供 ResultsScreen 使用
 				var leWeekData:WeekData = loadedWeeks[curWeek];

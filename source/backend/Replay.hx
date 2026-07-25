@@ -68,7 +68,7 @@ class Replay
 		this.path = path;
 		replay = {
 			replayGameVer: version,
-			timestamp: Std.string(Date.now().getTime()),
+			timestamp: DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S"),
 			songName: "No Song Found",
 			songId: "",
 			songDiff: 0,
@@ -95,7 +95,7 @@ class Replay
 	{
 		var json:ReplayJSON = {
 			replayGameVer: version,
-			timestamp: Std.string(Date.now().getTime()),
+			timestamp: DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S"),
 			songName: songName,
 			songId: songId,
 			songDiff: diff,
@@ -112,7 +112,7 @@ class Replay
 
 		var data:String = Json.stringify(json, null, "\t");
 
-		var time:Float = Date.now().getTime();
+		var time:String = DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S");
 		var fileName:String = "replay-" + songId + "-diff" + diff + "-" + time + ".unknownReplay";
 		// 使用 FlxG.save 保存（兼容所有平台）
 		if (FlxG.save.data.replays == null)
@@ -127,31 +127,37 @@ class Replay
 	}
 
 	// Unknown Engine: 生成回放 JSON 文件路径
-	// 路径格式: replays/jsons/songname/ue_timestamp_songname_diff.json
+	// 路径格式: replays/jsons/songname/ue_YYYY-MM-DD_HH-MM-SS_songname_diff.json
 	public static function makeReplayPath(songName:String, diff:Int):String
 	{
-		var timestamp:Float = Date.now().getTime();
+		var timestamp:String = DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S");
 		var diffs:Array<String> = ['easy', 'normal', 'hard'];
 		var diffStr:String = (diff >= 0 && diff < diffs.length) ? diffs[diff] : 'normal';
 		var songLower:String = Paths.formatToSongPath(songName);
 		return 'replays/jsons/$songLower/ue_${timestamp}_${songLower}_${diffStr}.json';
 	}
 
-	// Unknown Engine: 保存帧级按键数据到 JSON 文件
-	// 保存路径: replays/jsons/songname/ue_YYYY-MM-DD_songname_diff.json
-	public function saveInputFrames(songName:String, songId:String, diff:Int,
+	// Unknown Engine: 统一保存回放数据（note 数据 + 帧级输入）到单个 JSON 文件
+	// 同时在 FlxG.save.data.replays 中注册元数据供旧版浏览器使用
+	public function saveReplayFile(songName:String, songId:String, diff:Int,
+		notearray:Array<Array<Dynamic>>, judge:Array<String>,
 		inputFrames:Array<Dynamic>, noteSpeed:Float, isDownscroll:Bool, sf:Int, replayChar:String):Void
 	{
 		try
 		{
 			var songLower:String = Paths.formatToSongPath(songName);
 			var diffName:String = Difficulty.getString(diff, false);
+			var timestamp:String = DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S");
+
 			var json:Dynamic = {
 				replayGameVer: version,
+				timestamp: timestamp,
 				songName: songName,
 				songId: songId,
 				songDiff: diff,
 				songDiffName: diffName,
+				songNotes: notearray,
+				songJudgements: judge,
 				noteSpeed: noteSpeed,
 				isDownscroll: isDownscroll,
 				sf: sf,
@@ -169,11 +175,21 @@ class Replay
 				sys.FileSystem.createDirectory(dir);
 
 			sys.io.File.saveContent(filePath, data);
-			trace('Replay inputs saved: $filePath (${inputFrames.length} frames)');
+			path = filePath;
+			trace('Replay saved: $filePath (${inputFrames.length} frames, ${notearray.length} notes)');
+
+			// 同时在 FlxG.save.data.replays 中注册元数据（供 LoadReplayState 旧版浏览器）
+			if (FlxG.save.data.replays == null)
+				FlxG.save.data.replays = new Map<String, String>();
+			var reps:Map<String, String> = FlxG.save.data.replays;
+			var regName:String = "replay-" + songId + "-diff" + diff + "-" + timestamp + ".unknownReplay";
+			reps.set(regName, data);
+			FlxG.save.data.replays = reps;
+			FlxG.save.flush();
 		}
 		catch (e:Dynamic)
 		{
-			trace('Failed to save replay inputs: $e');
+			trace('Failed to save replay file: $e');
 		}
 	}
 

@@ -411,9 +411,13 @@ class FreeplayState extends MusicBeatState
 
 			try
 			{
-				Song.loadFromJson(poop, songLowercase);
-				PlayState.isStoryMode = false;
-				PlayState.storyDifficulty = curDifficulty;
+			Song.loadFromJson(poop, songLowercase);
+			PlayState.isStoryMode = false;
+			PlayState.storyDifficulty = curDifficulty;
+
+			// 清理回放状态，确保正常游玩不被残留的 loadRep 影响
+			PlayState.loadRep = false;
+			PlayState.rep = null;
 
 				trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
 			}

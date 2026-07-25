@@ -417,6 +417,13 @@ class PlayState extends MusicBeatState
 						}
 						trace('Loaded ${replayInputFrames.length} replay input frames from $replayPath');
 					}
+					// 恢复 note 级数据（songNotes / songJudgements），使 popUpScore 使用原始评级
+					if (jsonData.songNotes != null && jsonData.songJudgements != null)
+					{
+						rep.replay.songNotes = jsonData.songNotes;
+						rep.replay.songJudgements = jsonData.songJudgements;
+						trace('Loaded ${rep.replay.songNotes.length} replay notes from $replayPath');
+					}
 				}
 			}
 			catch (e:Dynamic)
@@ -1728,6 +1735,15 @@ class PlayState extends MusicBeatState
 			FlxTween.globalManager.forEach(function(twn:FlxTween) if(!twn.finished) twn.active = true);
 
 			paused = false;
+			// 暂停恢复后推入当前按键状态帧，消除暂停期间的录制间隙
+			if (!cpuControlled && !loadRep && !endingSong && replayInputFrames.length > 0)
+			{
+				var held:Array<Bool> = [];
+				for (key in keysArray)
+					held.push(controls.pressed(key));
+				if (!arrayEqualsBool(held, replayInputFrames[replayInputFrames.length - 1].k))
+					replayInputFrames.push({t: Conductor.songPosition, k: held});
+			}
 			callOnScripts('onResume');
 			resetRPC(startTimer != null && startTimer.finished);
 		}
@@ -1959,7 +1975,7 @@ class PlayState extends MusicBeatState
 							// Kill extremely late notes and cause misses
 							if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
 							{
-								if (daNote.mustPress && !cpuControlled && !loadRep && !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
+								if (daNote.mustPress && !cpuControlled && !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
 									noteMiss(daNote);
 
 								daNote.active = daNote.visible = false;
@@ -2004,8 +2020,18 @@ class PlayState extends MusicBeatState
 			for (key in keysArray)
 				held.push(controls.pressed(key));
 
-			if (replayInputFrames.length == 0 || !arrayEqualsBool(held, replayInputFrames[replayInputFrames.length - 1].k))
+			// 首帧：推入全松开基线帧，确保回放有正确的初始状态
+			if (replayInputFrames.length == 0)
+			{
+				replayInputFrames.push({t: 0.0, k: [false, false, false, false]});
+				// 如果当前已有按键按下，紧接着推入实际状态帧
+				if (held.contains(true))
+					replayInputFrames.push({t: Conductor.songPosition, k: held});
+			}
+			else if (!arrayEqualsBool(held, replayInputFrames[replayInputFrames.length - 1].k))
+			{
 				replayInputFrames.push({t: Conductor.songPosition, k: held});
+			}
 		}
 
 	}
@@ -2820,37 +2846,25 @@ class PlayState extends MusicBeatState
 		{
 			var percent:Float = ratingPercent;
 			if(Math.isNaN(percent)) percent = 0;
-			#if !switch
-			if (!loadRep) // 回放时不保存分数/回放
-			{
-				Highscore.saveScore(Song.loadedSongName, songScore, storyDifficulty, percent);
-				if (!ClientPrefs.getGameplaySetting("practice") && !ClientPrefs.getGameplaySetting("botplay") && saveNotes.length > 0)
-				{
-					var r:Replay = new Replay();
-					r.SaveReplay(Song.loadedSongName, Song.loadedSongName, storyDifficulty,
-						saveNotes, saveJudges, replayAna,
-						SONG.speed, ClientPrefs.data.downScroll,
-						10, replayChar);
-					rep = r;
+		#if !switch
+		if (!loadRep) // 回放时不保存分数/回放
+		{
+			Highscore.saveScore(Song.loadedSongName, songScore, storyDifficulty, percent);
+			saveReplayData();
+		}
+		#end
 
-					if (replayInputFrames.length > 0)
-						r.saveInputFrames(Song.loadedSongName, Song.loadedSongName, storyDifficulty,
-							cast replayInputFrames, SONG.speed, ClientPrefs.data.downScroll, 10, replayChar);
-				}
-			}
-			#end
+		// 状态跳转逻辑 — Unknown Engine
+		transitioning = true;
 
-			// 状态跳转逻辑 — Unknown Engine
-			transitioning = true;
-
-			if (loadRep)
-			{
-				// 回放模式结束 — 打开 ReplayOverSubstate（重新播放 / 退出播放）
-				FlxG.sound.music.stop();
-				openSubState(new substates.ReplayOverSubstate());
-			}
-			else if (isStoryMode)
-			{
+		if (loadRep)
+		{
+			// 回放模式结束 — 打开 ReplayOverSubstate（重新播放 / 退出播放）
+			FlxG.sound.music.stop();
+			openSubState(new substates.ReplayOverSubstate());
+		}
+		else if (isStoryMode)
+		{
 				campaignScore += songScore;
 				campaignMisses += songMisses;
 				campaignSicks += ratingsData[0].hits;
@@ -2864,26 +2878,14 @@ class PlayState extends MusicBeatState
 				var difficultySuffix:String = Difficulty.getFilePath(storyDifficulty);
 				if (difficultySuffix == null) difficultySuffix = '';
 
-				// Story Mode: 每首曲子结束后自动保存回放
-				if (!ClientPrefs.getGameplaySetting("practice") && !ClientPrefs.getGameplaySetting("botplay") && saveNotes.length > 0)
-				{
-					var r:Replay = new Replay();
-					r.SaveReplay(Song.loadedSongName, Song.loadedSongName, storyDifficulty,
-						saveNotes, saveJudges, replayAna,
-						SONG.speed, ClientPrefs.data.downScroll,
-						10, replayChar);
-					rep = r;
-
-					if (replayInputFrames.length > 0)
-						r.saveInputFrames(Song.loadedSongName, Song.loadedSongName, storyDifficulty,
-							cast replayInputFrames, SONG.speed, ClientPrefs.data.downScroll, 10, replayChar);
-				}
-				// 清空回放数据，为下一首歌做准备
-				saveNotes = [];
-				saveJudges = [];
-				replayInputFrames = [];
-				replayInputIndex = 0;
-				replayAna = new Analysis();
+			// Story Mode: 每首曲子结束后自动保存回放
+			saveReplayData();
+			// 清空回放数据，为下一首歌做准备
+			saveNotes = [];
+			saveJudges = [];
+			replayInputFrames = [];
+			replayInputIndex = 0;
+			replayAna = new Analysis();
 
 				storyPlaylist.remove(storyPlaylist[0]);
 
@@ -3333,25 +3335,52 @@ class PlayState extends MusicBeatState
 		var pressArray:Array<Bool> = [];
 		var releaseArray:Array<Bool> = [];
 
-		// Replay: 注入录制的按键数据
+		// Replay: 注入录制的按键数据 — 逐帧处理所有中间帧，避免丢失短促的 press/release
 		if (loadRep && replayInputFrames != null && replayInputFrames.length > 0)
 		{
 			var ct:Float = Conductor.songPosition;
+			var prevIndex:Int = replayInputIndex;
+
+			// 逐帧推进，处理每一帧的按键变化（不跳过任何中间帧）
 			while (replayInputIndex < replayInputFrames.length - 1
 				&& replayInputFrames[replayInputIndex + 1].t <= ct)
+			{
+				var prev:ReplayFrameData = replayInputFrames[replayInputIndex];
 				replayInputIndex++;
+				var cur:ReplayFrameData = replayInputFrames[replayInputIndex];
 
+				for (i in 0...4)
+				{
+					if (cur.k[i] && !prev.k[i] && strumsBlocked[i] != true)
+						keyPressed(i);
+					if (!cur.k[i] && prev.k[i])
+						keyReleased(i);
+				}
+			}
+
+			// 用当前帧设置 holdArray（用于 sustain 判定）
 			var frame:ReplayFrameData = replayInputFrames[replayInputIndex];
 			var prevFrame:ReplayFrameData = (replayInputIndex > 0) ? replayInputFrames[replayInputIndex - 1] : null;
 
 			for (i in 0...4)
 			{
 				holdArray[i] = frame.k[i];
-				pressArray[i] = frame.k[i] && (prevFrame == null || !prevFrame.k[i]);
-				releaseArray[i] = !frame.k[i] && (prevFrame != null && prevFrame.k[i]);
+
+				// 索引已推进时 while 循环已处理所有 press/release，设为 false 避免重复调用
+				// 索引未推进时（无新帧）计算 press/release 用于首帧初始化或保持兼容
+				if (replayInputIndex != prevIndex)
+				{
+					pressArray[i] = false;
+					releaseArray[i] = false;
+				}
+				else
+				{
+					pressArray[i] = frame.k[i] && (prevFrame == null || !prevFrame.k[i]);
+					releaseArray[i] = !frame.k[i] && (prevFrame != null && prevFrame.k[i]);
+				}
 			}
 
-			// 模拟 keyPressed / keyReleased
+			// 模拟 keyPressed / keyReleased（仅在无新帧推进时处理首帧或当前帧转换）
 			for (i in 0...4)
 			{
 				if (pressArray[i] && strumsBlocked[i] != true)
@@ -3713,6 +3742,31 @@ class PlayState extends MusicBeatState
 		for (i in 0...a.length)
 			if (a[i] != b[i]) return false;
 		return true;
+	}
+
+	// 统一保存回放数据 — note 数据 + 帧级输入合并到单个 JSON 文件
+	function saveReplayData():Void
+	{
+		if (ClientPrefs.getGameplaySetting("practice") || ClientPrefs.getGameplaySetting("botplay"))
+			return;
+		if (saveNotes.length == 0)
+			return;
+
+		// 推入终止帧（全松开），确保回放结束时所有按键正确释放
+		if (replayInputFrames.length > 0)
+		{
+			var lastFrame:ReplayFrameData = replayInputFrames[replayInputFrames.length - 1];
+			var allReleased:Bool = true;
+			for (k in lastFrame.k) { if (k) { allReleased = false; break; } }
+			if (!allReleased)
+				replayInputFrames.push({t: Conductor.songPosition + 1, k: [false, false, false, false]});
+		}
+
+		var r:Replay = new Replay();
+		r.saveReplayFile(Song.loadedSongName, Song.loadedSongName, storyDifficulty,
+			saveNotes, saveJudges,
+			cast replayInputFrames, SONG.speed, ClientPrefs.data.downScroll, 10, replayChar);
+		rep = r;
 	}
 
 	public function invalidateNote(note:Note):Void {

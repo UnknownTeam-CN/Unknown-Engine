@@ -25,7 +25,7 @@ class OutdatedSubState extends MusicBeatSubstate
 
 		var curVer:String = MainMenuState.psychEngineVersion;
 		warnText = new FlxText(0, 0, FlxG.width,
-			Language.getPhrase('outdated_warning', 'Sup bro, looks like you\'re running an outdated version of\nPsych Engine ({1})\n\nPlease update to the latest version to prevent issues!\n\nCurrent version: {2}\nLatest version: {3}\n\nPress ACCEPT to proceed anyway.\nPress BACK to check for an update.').replace('{1}', curVer).replace('{2}', curVer).replace('{3}', updateVersion),
+			Language.getPhrase('outdated_warning', 'Sup bro, looks like you\'re running an outdated version of\nUnknown Engine ({1})\n\nPlease update to the latest version to prevent issues!\n\nCurrent version: {2}\nLatest version: {3}\n\nPress ACCEPT to proceed anyway.\nPress BACK to check for an update.').replace('{1}', curVer).replace('{2}', curVer).replace('{3}', updateVersion),
 			32);
 		warnText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
 		warnText.scrollFactor.set();
@@ -42,7 +42,7 @@ class OutdatedSubState extends MusicBeatSubstate
 		if(!leftState) {
 			if (controls.ACCEPT) {
 				leftState = true;
-				CoolUtil.browserLoad("https://github.com/ShadowMario/FNF-PsychEngine/releases");
+				CoolUtil.browserLoad("https://github.com/UnknownTeam-CN/Unknown-Engine/releases");
 			}
 			else if(controls.BACK) {
 				leftState = true;
