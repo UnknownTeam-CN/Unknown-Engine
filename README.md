@@ -19,6 +19,6 @@ A LOT DAM!!!!!!!!!!!!!!!
 So that's why we need help
 
 # Thanks to
-PsychEngine Devs(1.0.4 Engine itself)
-FunkinCrews(Original Game SRC)
-KadeEngine Devs(Replay and resultscreen idea,some pngs)
+* PsychEngine Devs(1.0.4 Engine itself)
+* FunkinCrews(Original Game SRC)
+* KadeEngine Devs(Replay and resultscreen idea,some pngs)
