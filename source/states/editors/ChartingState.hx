@@ -964,7 +964,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		tipText.cameras = [camUI];
 
-		tipText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, RIGHT);
+		tipText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, RIGHT);
 
 		tipText.borderColor = FlxColor.BLACK;
 
@@ -998,7 +998,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		fullTipText = new FlxText(0, 0, FlxG.width - 200);
 
-		fullTipText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, CENTER);
+		fullTipText.setFormat(Paths.font('pixel-latin.ttf'), 28, FlxColor.WHITE, CENTER);
 
 		fullTipText.cameras = [camUI];
 

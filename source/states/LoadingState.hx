@@ -509,12 +509,12 @@ class LoadingState extends MusicBeatState
 			preloadCharacter(player1, prefixVocals);
 			if (!dontPreloadDefaultVoices && prefixVocals != null)
 			{
-				if(Paths.fileExists('$prefixVocals-Player.${Paths.SOUND_EXT}', SOUND, false, 'songs') && Paths.fileExists('$prefixVocals-Opponent.${Paths.SOUND_EXT}', SOUND, false, 'songs'))
+				if(Paths.soundFileExists('$prefixVocals-Player', 'songs') && Paths.soundFileExists('$prefixVocals-Opponent', 'songs'))
 				{
 					songsToPrepare.push('$prefixVocals-Player');
 					songsToPrepare.push('$prefixVocals-Opponent');
 				}
-				else if(Paths.fileExists('$prefixVocals.${Paths.SOUND_EXT}', SOUND, false, 'songs'))
+				else if(Paths.soundFileExists(prefixVocals, 'songs'))
 					songsToPrepare.push(prefixVocals);
 			}
 
@@ -551,9 +551,9 @@ class LoadingState extends MusicBeatState
 	public static function clearInvalids()
 	{
 		clearInvalidFrom(imagesToPrepare, 'images', '.png', IMAGE);
-		clearInvalidFrom(soundsToPrepare, 'sounds', '.${Paths.SOUND_EXT}', SOUND);
-		clearInvalidFrom(musicToPrepare, 'music',' .${Paths.SOUND_EXT}', SOUND);
-		clearInvalidFrom(songsToPrepare, 'songs', '.${Paths.SOUND_EXT}', SOUND, 'songs');
+		clearInvalidSoundsFrom(soundsToPrepare, 'sounds');
+		clearInvalidSoundsFrom(musicToPrepare, 'music');
+		clearInvalidSoundsFrom(songsToPrepare, 'songs', 'songs');
 
 		for (arr in [imagesToPrepare, soundsToPrepare, musicToPrepare, songsToPrepare])
 			while (arr.contains(null))
@@ -599,6 +599,56 @@ class LoadingState extends MusicBeatState
 				if(doTrace) trace('Removed invalid $prefix: $member');
 			}
 			else i++;
+		}
+	}
+
+	// 音频专用清理 — 支持多格式回退（ogg/mp3/wav/flac）
+	static function clearInvalidSoundsFrom(arr:Array<String>, prefix:String, ?parentFolder:String = null)
+	{
+		// 扫描子文件夹中的所有支持的音频格式
+		for (folder in arr.copy())
+		{
+			var nam:String = folder.trim();
+			if(nam.endsWith('/'))
+			{
+				for (subfolder in Mods.directoriesWithFile(Paths.getSharedPath(), '$prefix/$nam'))
+				{
+					for (file in FileSystem.readDirectory(subfolder))
+					{
+						for (ext in Paths.SOUND_EXTS)
+						{
+							if(file.endsWith('.' + ext))
+							{
+								var toAdd:String = nam + haxe.io.Path.withoutExtension(file);
+								if(!arr.contains(toAdd)) arr.push(toAdd);
+								break; // 同名文件只添加一次
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// 检查每个成员是否有任意格式存在
+		var i:Int = 0;
+		while(i < arr.length)
+		{
+			var member:String = arr[i];
+			if(member.endsWith('/'))
+			{
+				arr.remove(member);
+			}
+			else
+			{
+				var key:String = (parentFolder != null) ? member : '$prefix/$member';
+				var doTrace:Bool = false;
+				if(!Paths.soundFileExists(key, parentFolder) && (doTrace = true))
+				{
+					arr.remove(member);
+					if(doTrace) trace('Removed invalid $prefix: $member');
+				}
+				else i++;
+			}
 		}
 	}
 
@@ -710,10 +760,10 @@ class LoadingState extends MusicBeatState
 		}
 	}
 
-	// thread safe sound loader
+	// thread safe sound loader — 支持多音频格式回退
 	static function preloadSound(key:String, ?path:String, ?modsAllowed:Bool = true, ?beepOnNull:Bool = true):Null<Sound>
 	{
-		var file:String = Paths.getPath(Language.getFileTranslation(key) + '.${Paths.SOUND_EXT}', SOUND, path, modsAllowed);
+		var file:String = Paths.resolveSoundFile(key, path, modsAllowed);
 
 		//trace('precaching sound: $file');
 		if(!Paths.currentTrackedSounds.exists(file))

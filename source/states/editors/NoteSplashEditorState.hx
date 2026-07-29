@@ -146,7 +146,7 @@ class NoteSplashEditorState extends MusicBeatState
 
         var tipText:FlxText = new FlxText();
 
-        tipText.setFormat(Paths.font('pixel-latin.ttf'), 24);
+        tipText.setFormat(Paths.font('pixel-latin.ttf'), 28);
 
         tipText.text = "Press F1 for Help";
 
@@ -210,7 +210,7 @@ class NoteSplashEditorState extends MusicBeatState
 
         errorText = new FlxText();
 
-        errorText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.RED);
+        errorText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.RED);
 
         errorText.text = "ERROR!";
 
@@ -224,7 +224,7 @@ class NoteSplashEditorState extends MusicBeatState
 
         curText = new FlxText();
 
-        curText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+        curText.setFormat(Paths.font('pixel-latin.ttf'), 28, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 
         curText.text = 'Copied Offsets: [0, 0]\nCurrent Animation: NONE';
 
@@ -1910,7 +1910,7 @@ class NoteSplashEditorHelpSubState extends MusicBeatSubstate
 
             var helpText:FlxText = new FlxText(0, 0, 0, txt, 24);
 
-            helpText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+            helpText.setFormat(Paths.font('pixel-latin.ttf'), 28, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 
             helpText.borderColor = FlxColor.BLACK;
 
@@ -1934,7 +1934,7 @@ class NoteSplashEditorHelpSubState extends MusicBeatSubstate
 
         var noteDataText:FlxText = new FlxText();
 
-        noteDataText.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
+        noteDataText.setFormat(Paths.font('pixel-latin.ttf'), 28, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
 
         noteDataText.text = "NOTE DATAS:\nLEFT: 0\nDOWN: 1\nUP: 2\nRIGHT: 3";
 

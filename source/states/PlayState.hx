@@ -244,6 +244,11 @@ class PlayState extends MusicBeatState
 
 	public var iconP1:HealthIcon;
 	public var iconP2:HealthIcon;
+
+	// Note Jump: beat-sync strum scale/angle proxy (ported from Note Jump.lua)
+	private var noteJumpProxy:FlxSprite;
+	private var noteJumpStarted:Bool = false;
+
 	public var camHUD:FlxCamera;
 	public var camGame:FlxCamera;
 	public var camOther:FlxCamera;
@@ -273,6 +278,56 @@ class PlayState extends MusicBeatState
 	public var lyricText:FlxText = null;
 	public static var lyric2Y:Float = 0;  // rest position for Lyric2
 	public static var lyricTextY:Float = 0; // rest position for Lyric - Set Text
+	// Stored colors so color events work even if fired before text is created
+	public static var lyric2Color:Null<FlxColor> = null;
+	public static var lyricTextColor:Null<FlxColor> = null;
+
+	/**
+	 * Robustly parse a lyric color event value into a FlxColor.
+	 * Accepts (case-insensitive, optional quotes/whitespace):
+	 *   - "#ff0000" / "0xff0000" / "ff0000"   (6-digit hex, alpha forced opaque)
+	 *   - "#ffff0088" / "ffff0088"            (8-digit RRGGBBAA)
+	 *   - "f00"                              (3-digit shorthand -> #ff0000)
+	 *   - named colors ("red", "white", ...)
+	 * Empty/invalid input falls back to FlxColor.WHITE.
+	 */
+	private function parseLyricColor(str:String):FlxColor
+	{
+		if (str == null) return FlxColor.WHITE;
+		str = str.trim();
+		// strip wrapping quotes (", ')
+		if (str.length >= 2)
+		{
+			var first:String = str.charAt(0);
+			var last:String = str.charAt(str.length - 1);
+			if ((first == '"' && last == '"') || (first == "'" && last == "'"))
+				str = str.substring(1, str.length - 1).trim();
+		}
+		if (str == '') return FlxColor.WHITE;
+
+		// already prefixed with 0x / # — hand straight to fromString
+		if (~/^(0x|#)/i.match(str))
+		{
+			var c:Null<FlxColor> = FlxColor.fromString(str);
+			if (c != null) return c;
+			return FlxColor.WHITE;
+		}
+
+		// pure hex digits — normalize then let fromString handle 6/8-digit + alpha
+		if (~/^[A-Fa-f0-9]+$/.match(str))
+		{
+			if (str.length == 3) // #f00 -> #ff0000
+				str = str.charAt(0) + str.charAt(0) + str.charAt(1) + str.charAt(1) + str.charAt(2) + str.charAt(2);
+			var c:Null<FlxColor> = FlxColor.fromString('#' + str);
+			if (c != null) return c;
+			return FlxColor.WHITE;
+		}
+
+		// named color ("red", "white", ...)
+		var named:Null<FlxColor> = FlxColor.fromString(str);
+		if (named != null) return named;
+		return FlxColor.WHITE;
+	}
 
 	// Shader event state — tracks active runtime shaders applied via event
 	public static var activeShaderEvents:Map<String, {shader: shaders.ErrorHandledShader.ErrorHandledRuntimeShader, filter: openfl.filters.ShaderFilter}> = new Map();
@@ -666,12 +721,14 @@ class PlayState extends MusicBeatState
 		iconP1.y = healthBar.y - 75;
 		iconP1.visible = !ClientPrefs.data.hideHud;
 		iconP1.alpha = ClientPrefs.data.healthBarAlpha;
+		iconP1.inGameplay = true;
 		uiGroup.add(iconP1);
 
 		iconP2 = new HealthIcon(dad.healthIcon, false);
 		iconP2.y = healthBar.y - 75;
 		iconP2.visible = !ClientPrefs.data.hideHud;
 		iconP2.alpha = ClientPrefs.data.healthBarAlpha;
+		iconP2.inGameplay = true;
 		uiGroup.add(iconP2);
 
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 20);
@@ -767,6 +824,12 @@ class PlayState extends MusicBeatState
 		cachePopUpScore();
 
 		if(eventNotes.length < 1) checkEventNote();
+
+		// Note Jump: init off-screen proxy sprite used as tween target for beat-sync strum animation
+		noteJumpProxy = new FlxSprite(-114514, -1919810);
+		noteJumpProxy.makeGraphic(1, 1, 0xFF000000);
+		noteJumpProxy.scrollFactor.set(0, 0);
+		add(noteJumpProxy);
 	}
 
 	function set_songSpeed(value:Float):Float
@@ -1393,6 +1456,9 @@ class PlayState extends MusicBeatState
 		#end
 		setOnScripts('songLength', songLength);
 		callOnScripts('onSongStart');
+
+		// Note Jump: enable alpha sync once song actually starts
+		noteJumpStarted = true;
 	}
 
 	private var noteTypes:Array<String> = [];
@@ -1828,6 +1894,28 @@ class PlayState extends MusicBeatState
 			}
 		}
 		else FlxG.camera.followLerp = 0;
+
+		// Note Jump: sync all strum scale/angle (and alpha after song start) from proxy each frame
+		if (noteJumpProxy != null)
+		{
+			final proxyScaleX:Float = noteJumpProxy.scale.x * 0.696774193548367;
+			final proxyScaleY:Float = noteJumpProxy.scale.y * 0.696774193548367;
+			final proxyAngle:Float  = noteJumpProxy.angle;
+			final proxyAlpha:Float  = noteJumpProxy.alpha;
+			playerStrums.forEach(function(strum:StrumNote) {
+				strum.scale.x = proxyScaleX;
+				strum.scale.y = proxyScaleY;
+				strum.angle   = proxyAngle;
+				if (noteJumpStarted) strum.alpha = proxyAlpha;
+			});
+			opponentStrums.forEach(function(strum:StrumNote) {
+				strum.scale.x = proxyScaleX;
+				strum.scale.y = proxyScaleY;
+				strum.angle   = proxyAngle;
+				if (noteJumpStarted) strum.alpha = proxyAlpha;
+			});
+		}
+
 		callOnScripts('onUpdate', [elapsed]);
 
 		super.update(elapsed);
@@ -1856,11 +1944,6 @@ class PlayState extends MusicBeatState
 				openCharacterEditor();
 		}
 
-		if (healthBar.bounds.max != null && health > healthBar.bounds.max)
-			health = healthBar.bounds.max;
-
-		updateIconsScale(elapsed);
-		updateIconsPosition();
 
 		if (startedCountdown && !paused)
 		{
@@ -2020,11 +2103,9 @@ class PlayState extends MusicBeatState
 			for (key in keysArray)
 				held.push(controls.pressed(key));
 
-			// 首帧：推入全松开基线帧，确保回放有正确的初始状态
 			if (replayInputFrames.length == 0)
 			{
 				replayInputFrames.push({t: 0.0, k: [false, false, false, false]});
-				// 如果当前已有按键按下，紧接着推入实际状态帧
 				if (held.contains(true))
 					replayInputFrames.push({t: Conductor.songPosition, k: held});
 			}
@@ -2034,25 +2115,6 @@ class PlayState extends MusicBeatState
 			}
 		}
 
-	}
-
-	// Health icon updaters
-	public dynamic function updateIconsScale(elapsed:Float)
-	{
-		var mult:Float = FlxMath.lerp(1, iconP1.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-		iconP1.scale.set(mult, mult);
-		iconP1.updateHitbox();
-
-		var mult:Float = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-		iconP2.scale.set(mult, mult);
-		iconP2.updateHitbox();
-	}
-
-	public dynamic function updateIconsPosition()
-	{
-		var iconOffset:Int = 26;
-		iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150) / 2 - iconOffset;
-		iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x) / 2 - iconOffset * 2;
 	}
 
 	var iconsAnimations:Bool = true;
@@ -2575,6 +2637,8 @@ class PlayState extends MusicBeatState
 					lyric2Text.scrollFactor.set();
 					lyric2Text.alpha = 0;
 					add(lyric2Text);
+					// Apply stored color if a color event fired before text creation
+					if (lyric2Color != null) lyric2Text.color = lyric2Color;
 				}
 
 				FlxTween.cancelTweensOf(lyric2Text, ["y", "alpha"]);
@@ -2610,6 +2674,8 @@ class PlayState extends MusicBeatState
 					lyricText.scrollFactor.set();
 					lyricText.alpha = 0;
 					add(lyricText);
+					// Apply stored color if a color event fired before text creation
+					if (lyricTextColor != null) lyricText.color = lyricTextColor;
 				}
 
 				FlxTween.cancelTweensOf(lyricText, ["y", "alpha"]);
@@ -2630,29 +2696,21 @@ class PlayState extends MusicBeatState
 					FlxTween.tween(lyricText, {alpha: 0}, fadeTime, {ease: FlxEase.quadIn});
 				}
 
-			case 'Lyric2 Color':
-				// Change color of Lyric2 text (from Avis's Lyric2 Color.lua)
-				// Value 1: hex color string (e.g. "ff0000"), empty = white
-				if (lyric2Text != null)
-				{
-					var colorStr:String = (value1 != null) ? value1.trim() : '';
-					if (colorStr == '')
-						lyric2Text.color = FlxColor.WHITE;
-					else
-						lyric2Text.color = FlxColor.fromString('#' + colorStr);
-				}
+		case 'Lyric2 Color':
+			// Change color of Lyric2 text (from Avis's Lyric2 Color.lua)
+			// Value 1: hex color string (e.g. "ff0000" / "#ff0000" / "f00" / "red"), empty = white
+			var newColor2:FlxColor = parseLyricColor(value1);
+			lyric2Color = newColor2;
+			if (lyric2Text != null)
+				lyric2Text.color = newColor2;
 
-			case 'Lyric - Set Color':
-				// Change color of Lyric - Set Text text (from Avis's Lyric - Set Color.lua)
-				// Value 1: hex color string (e.g. "ff0000"), empty = white
-				if (lyricText != null)
-				{
-					var colorStr:String = (value1 != null) ? value1.trim() : '';
-					if (colorStr == '')
-						lyricText.color = FlxColor.WHITE;
-					else
-						lyricText.color = FlxColor.fromString('#' + colorStr);
-				}
+		case 'Lyric - Set Color':
+			// Change color of Lyric - Set Text text (from Avis's Lyric - Set Color.lua)
+			// Value 1: hex color string (e.g. "ff0000" / "#ff0000" / "f00" / "red"), empty = white
+			var newColorText:FlxColor = parseLyricColor(value1);
+			lyricTextColor = newColorText;
+			if (lyricText != null)
+				lyricText.color = newColorText;
 
 			case 'Shader':
 				#if (!flash && sys)
@@ -3835,6 +3893,8 @@ class PlayState extends MusicBeatState
 		silhouetteActive = false; // cleanup silhouette event state
 		lyric2Text = null; // cleanup lyric2 event state
 		lyricText = null;  // cleanup lyric text event state
+		lyric2Color = null; // reset stored lyric color
+		lyricTextColor = null; // reset stored lyric color
 
 		#if FLX_PITCH FlxG.sound.music.pitch = 1; #end
 		FlxG.animationTimeScale = 1;
@@ -3886,6 +3946,16 @@ class PlayState extends MusicBeatState
 
 		setOnScripts('curBeat', curBeat);
 		callOnScripts('onBeatHit');
+
+		// Note Jump: trigger beat-sync tween on proxy — scale/angle/alpha ripple to all strums via update()
+		if (noteJumpProxy != null)
+		{
+			noteJumpProxy.scale.set(1.03 + 0.04, 0.97 - 0.04);
+			noteJumpProxy.angle = 1.50625;
+			FlxTween.tween(noteJumpProxy, {alpha: 0.9}, 0.25, {ease: FlxEase.sineInOut});
+			FlxTween.tween(noteJumpProxy.scale, {x: 1, y: 1}, 0.25, {ease: FlxEase.sineInOut});
+			FlxTween.tween(noteJumpProxy, {angle: 0}, 0.25, {ease: FlxEase.sineInOut});
+		}
 	}
 
 	public function characterBopper(beat:Int):Void

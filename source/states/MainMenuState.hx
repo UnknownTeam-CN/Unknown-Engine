@@ -12,7 +12,7 @@ import options.OptionsState;
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4';
-	public static var UnknownEngineVersion:String = '1.0.3 Release';
+	public static var UnknownEngineVersion:String = '1.0.4 Release';
 	public static var curSelected:Int = 0;
 
 	var menuItems:Array<String> = [

@@ -19,7 +19,7 @@ class PsychUITab extends FlxSprite
 
 		@:bypassAccessor this.name = name;
 		text = new FlxText(0, 0, 100, name);
-		text.setFormat(Paths.font('pixel-latin.ttf'), 8);
+		text.setFormat(Paths.font('pixel-latin.ttf'), 12);
 		text.alignment = CENTER;
 	}
 

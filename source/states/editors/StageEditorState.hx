@@ -320,7 +320,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 			var helpText:FlxText = new FlxText(0, 0, 680, txt, 16);
 
-			helpText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+			helpText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 
 			helpText.borderColor = FlxColor.BLACK;
 
@@ -544,7 +544,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		posTxt = new FlxText(0, 50, 500, 'X: 0\nY: 0', 24);
 
-		posTxt.setFormat(Paths.font('pixel-latin.ttf'), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		posTxt.setFormat(Paths.font('pixel-latin.ttf'), 28, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 
 		posTxt.borderSize = 2;
 
@@ -4454,7 +4454,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 
 
 
-			text.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+			text.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
 
 			text.scrollFactor.set();
 

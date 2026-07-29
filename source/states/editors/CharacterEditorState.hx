@@ -206,7 +206,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		animsTxt = new FlxText(10, 32, 400, '');
 
-		animsTxt.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+		animsTxt.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
 
 		animsTxt.scrollFactor.set();
 
@@ -258,7 +258,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		tipText.cameras = [camHUD];
 
-		tipText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
+		tipText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
 
 		tipText.borderColor = FlxColor.BLACK;
 
@@ -274,7 +274,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		cameraZoomText = new FlxText(0, 50, 200, 'Zoom: 1x');
 
-		cameraZoomText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+		cameraZoomText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 
 		cameraZoomText.scrollFactor.set();
 
@@ -290,7 +290,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		frameAdvanceText = new FlxText(0, 75, 350, '');
 
-		frameAdvanceText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+		frameAdvanceText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 
 		frameAdvanceText.scrollFactor.set();
 
@@ -408,7 +408,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 			var helpText:FlxText = new FlxText(0, 0, 600, txt, 16);
 
-			helpText.setFormat(Paths.font('pixel-latin.ttf'), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+			helpText.setFormat(Paths.font('pixel-latin.ttf'), 20, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 
 			helpText.borderColor = FlxColor.BLACK;
 

@@ -27,6 +27,7 @@ import backend.Mods;
 class Paths
 {
 	inline public static var SOUND_EXT = #if web "mp3" #else "ogg" #end;
+	public static var SOUND_EXTS:Array<String> = #if web ['mp3', 'ogg', 'wav'] #else ['ogg', 'mp3', 'wav', 'flac'] #end;
 	inline public static var VIDEO_EXT = "mp4";
 
 	public static function excludeAsset(key:String) {
@@ -421,9 +422,40 @@ class Paths
 	}
 
 	public static var currentTrackedSounds:Map<String, Sound> = [];
+
+	// 尝试所有支持的音频格式，返回第一个存在的文件路径
+	public static function resolveSoundFile(key:String, ?path:String, ?modsAllowed:Bool = true):String
+	{
+		var translatedKey:String = Language.getFileTranslation(key);
+		for (ext in SOUND_EXTS)
+		{
+			var file:String = getPath(translatedKey + '.' + ext, SOUND, path, modsAllowed);
+			#if sys
+			if (FileSystem.exists(file))
+				return file;
+			#else
+			if (OpenFlAssets.exists(file, SOUND))
+				return file;
+			#end
+		}
+		// 没有找到任何格式的文件，回退到首选扩展名
+		return getPath(translatedKey + '.' + SOUND_EXT, SOUND, path, modsAllowed);
+	}
+
+	// 检查任意支持的音频格式是否存在（用于 LoadingState 等处的预加载验证）
+	public static function soundFileExists(key:String, ?parentFolder:String = null):Bool
+	{
+		for (ext in SOUND_EXTS)
+		{
+			if (fileExists(key + '.' + ext, SOUND, false, parentFolder))
+				return true;
+		}
+		return false;
+	}
+
 	public static function returnSound(key:String, ?path:String, ?modsAllowed:Bool = true, ?beepOnNull:Bool = true)
 	{
-		var file:String = getPath(Language.getFileTranslation(key) + '.$SOUND_EXT', SOUND, path, modsAllowed);
+		var file:String = resolveSoundFile(key, path, modsAllowed);
 
 		//trace('precaching sound: $file');
 		if(!currentTrackedSounds.exists(file))

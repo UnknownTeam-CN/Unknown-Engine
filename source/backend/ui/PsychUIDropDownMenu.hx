@@ -243,7 +243,7 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 		add(bg);
 
 		text = new FlxText(0, 0, width, 8);
-		text.setFormat(Paths.font('pixel-latin.ttf'), 8);
+		text.setFormat(Paths.font('pixel-latin.ttf'), 12);
 		text.color = FlxColor.BLACK;
 		add(text);
 	}

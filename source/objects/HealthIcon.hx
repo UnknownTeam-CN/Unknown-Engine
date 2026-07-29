@@ -3,6 +3,7 @@ package objects;
 class HealthIcon extends FlxSprite
 {
 	public var sprTracker:FlxSprite;
+	public var inGameplay:Bool = false;
 	private var isPlayer:Bool = false;
 	private var char:String = '';
 
@@ -20,6 +21,17 @@ class HealthIcon extends FlxSprite
 
 		if (sprTracker != null)
 			setPosition(sprTracker.x + sprTracker.width + 12, sprTracker.y - 30);
+
+		// Integrated from onUpdatePost: override icon X position based on player side.
+		// Only during actual gameplay (PlayState HUD icons); outside of gameplay the
+		// icon keeps its own / sprTracker position instead of snapping to the screen edge.
+		if (inGameplay)
+		{
+			if (isPlayer)
+				x = FlxG.width - 150;
+			else
+				x = 40;
+		}
 	}
 
 	private var iconOffsets:Array<Float> = [0, 0];
