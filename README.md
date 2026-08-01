@@ -10,9 +10,9 @@ Don't worry, your dev team can be individual or a really team, when you made a P
 
 By the way, you can PR any new functions, every PR will be welcomed warmly
 # Features
-You can press H in freeplay to check the replay of the song you've chosen
-BPM now support adjust by click the TAP for 4 to 8, or just press the ANALYSE button to adjust BPM
-RAINBOW FPS!!!!!!!!
+- You can press H in freeplay to check the replay of the song you've chosen
+- BPM now support adjust by click the TAP for 4 to 8, or just press the ANALYSE button to adjust BPM
+- RAINBOW FPS!!!!!!!!
 
 # BUG
 A LOT DAM!!!!!!!!!!!!!!!
