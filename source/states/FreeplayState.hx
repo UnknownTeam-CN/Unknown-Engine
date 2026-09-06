@@ -42,6 +42,8 @@ class FreeplayState extends MusicBeatState
 
 	var bg:FlxSprite;
 	var intendedColor:Int;
+	var hintTxt:FlxText;
+	var lastInputMode:String = 'keyboard';
 
 	var missingTextBG:FlxSprite;
 	var missingText:FlxText;
@@ -103,10 +105,12 @@ class FreeplayState extends MusicBeatState
 		}
 		Mods.loadTopMod();
 
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
+		bg = ui.FluidBackground.create();
 		add(bg);
-		bg.screenCenter();
+		var fpOvl:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, ui.ModernTheme.OVERLAY);
+		fpOvl.scrollFactor.set();
+		fpOvl.alpha = 0.18;
+		add(fpOvl);
 
 		grpSongs = new FlxTypedGroup<Alphabet>();
 		add(grpSongs);
@@ -140,10 +144,10 @@ class FreeplayState extends MusicBeatState
 		WeekData.setDirectoryFromWeek();
 
 		scoreText = new FlxText(FlxG.width * 0.7, 5, 0, "", 32);
-		scoreText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, RIGHT);
+		scoreText.setFormat(Paths.font("vcr.ttf"), 32, ui.ModernTheme.TEXT_HI, RIGHT);
 
-		scoreBG = new FlxSprite(scoreText.x - 6, 0).makeGraphic(1, 66, 0xFF000000);
-		scoreBG.alpha = 0.6;
+		scoreBG = new FlxSprite(scoreText.x - 6, 0).makeGraphic(1, 66, ui.ModernTheme.OVERLAY);
+		scoreBG.alpha = 0.72;
 		add(scoreBG);
 
 		diffText = new FlxText(scoreText.x, scoreText.y + 36, 0, "", 24);
@@ -165,13 +169,11 @@ class FreeplayState extends MusicBeatState
 		add(missingText);
 
 		if(curSelected >= songs.length) curSelected = 0;
-		bg.color = songs[curSelected].color;
-		intendedColor = bg.color;
 		lerpSelected = curSelected;
 
 		curDifficulty = Math.round(Math.max(0, Difficulty.defaultList.indexOf(lastDifficultyName)));
 
-		bottomBG = new FlxSprite(0, FlxG.height - 50).makeGraphic(FlxG.width, 50, 0xFF000000);
+		bottomBG = new FlxSprite(0, FlxG.height - 50).makeGraphic(FlxG.width, 50, ui.ModernTheme.OVERLAY);
 		bottomBG.alpha = 0.6;
 		add(bottomBG);
 
@@ -188,6 +190,14 @@ class FreeplayState extends MusicBeatState
 		
 		changeSelection();
 		updateTexts();
+
+		// Device-aware hint (bottom-right corner, above the tip bar)
+		hintTxt = new FlxText(0, FlxG.height - 92, FlxG.width - 20, '', 15);
+		hintTxt.setFormat(Paths.font("vcr.ttf"), 15, ui.ModernTheme.TEXT_MID, RIGHT);
+		hintTxt.scrollFactor.set();
+		add(hintTxt);
+		refreshInputHint();
+
 		super.create();
 	}
 
@@ -196,6 +206,15 @@ class FreeplayState extends MusicBeatState
 		changeSelection(0, false);
 		persistentUpdate = true;
 		super.closeSubState();
+	}
+
+	public function refreshInputHint()
+	{
+		if (hintTxt == null) return;
+		var upDown:String = ui.InputMode.actionLabel('ui_up') + '/' + ui.InputMode.actionLabel('ui_down');
+		var acc:String = ui.InputMode.actionLabel('accept');
+		var back:String = ui.InputMode.actionLabel('back');
+		hintTxt.text = '$upDown 选择    $acc 进入    $back 返回';
 	}
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int)
@@ -222,6 +241,13 @@ class FreeplayState extends MusicBeatState
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
+
+		ui.InputMode.update();
+		if (ui.InputMode.mode() != lastInputMode)
+		{
+			lastInputMode = ui.InputMode.mode();
+			refreshInputHint();
+		}
 
 		lerpScore = Math.floor(FlxMath.lerp(intendedScore, lerpScore, Math.exp(-elapsed * 24)));
 		lerpRating = FlxMath.lerp(intendedRating, lerpRating, Math.exp(-elapsed * 12));
@@ -528,14 +554,7 @@ class FreeplayState extends MusicBeatState
 		curSelected = FlxMath.wrap(curSelected + change, 0, songs.length-1);
 		_updateSongLastDifficulty();
 		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-
-		var newColor:Int = songs[curSelected].color;
-		if(newColor != intendedColor)
-		{
-			intendedColor = newColor;
-			FlxTween.cancelTweensOf(bg);
-			FlxTween.color(bg, 1, bg.color, intendedColor);
-		}
+		ui.FluidBackground.kick();
 
 		for (num => item in grpSongs.members)
 		{

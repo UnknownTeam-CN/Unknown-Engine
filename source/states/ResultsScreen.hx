@@ -104,7 +104,7 @@ class ResultsScreen extends MusicBeatState
 		letterRank = RatingUtil.generateLetterRank(accuracy * 100, songMisses, bads, goods, sicks, shits);
 
 		// 背景
-		background = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		background = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, ui.ModernTheme.BG_COLOR);
 		background.alpha = 0;
 		add(background);
 
@@ -151,7 +151,7 @@ class ResultsScreen extends MusicBeatState
 		add(resultText);
 
 		// 右侧 HitGraph 容器 — 先隐藏
-		graphBG = new FlxSprite(FlxG.width - 520, 40).makeGraphic(500, 280, FlxColor.BLACK);
+		graphBG = new FlxSprite(FlxG.width - 520, 40).makeGraphic(500, 280, ui.ModernTheme.CARD_ALT_FILL);
 		graphBG.alpha = 0;
 		graphBG.scrollFactor.set();
 		add(graphBG);
@@ -268,7 +268,7 @@ class ResultsScreen extends MusicBeatState
 			elementsRevealed = true;
 			FlxTween.tween(songTitleText, {alpha: 1}, 0.4);
 			FlxTween.tween(resultText, {alpha: 1, y: 110}, 0.5, {ease: FlxEase.expoOut});
-			FlxTween.tween(graphBG, {alpha: 0.6}, 0.5);
+			FlxTween.tween(graphBG, {alpha: 0.8}, 0.5);
 			FlxTween.tween(hitGraph, {alpha: 1}, 0.5, {startDelay: 0.2});
 			FlxTween.tween(msWindowText, {alpha: 1}, 0.5, {startDelay: 0.3});
 			FlxTween.tween(pressEnterText, {alpha: 1, y: FlxG.height - 50}, 0.5, {ease: FlxEase.expoOut});

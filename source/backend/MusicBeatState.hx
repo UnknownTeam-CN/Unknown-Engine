@@ -53,6 +53,7 @@ class MusicBeatState extends FlxState
 	public static var timePassedOnState:Float = 0;
 	override function update(elapsed:Float)
 	{
+		ui.FluidBackground.updateMotion(elapsed);
 		//everyStep();
 		var oldStep:Int = curStep;
 		timePassedOnState += elapsed;

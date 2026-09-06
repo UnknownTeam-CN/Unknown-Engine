@@ -39,7 +39,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		#end
 		
 		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFFea71fd;
+		bg.color = ui.ModernTheme.CARD_ALT_FILL;
 		bg.screenCenter();
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		add(bg);
@@ -54,8 +54,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		checkboxGroup = new FlxTypedGroup<CheckboxThingie>();
 		add(checkboxGroup);
 
-		descBox = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
-		descBox.alpha = 0.6;
+		descBox = new FlxSprite().makeGraphic(1, 1, ui.ModernTheme.OVERLAY);
+		descBox.alpha = 0.72;
 		add(descBox);
 
 		var titleText:Alphabet = new Alphabet(75, 45, title, true);
@@ -65,7 +65,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		add(titleText);
 
 		descText = new FlxText(50, 600, 1180, "", 32);
-		descText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		descText.setFormat(Paths.font("vcr.ttf"), 32, ui.ModernTheme.TEXT_HI, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descText.scrollFactor.set();
 		descText.borderSize = 2.4;
 		add(descText);
@@ -485,12 +485,22 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		{
 			item.targetY = num - curSelected;
 			item.alpha = 0.6;
-			if (item.targetY == 0) item.alpha = 1;
+			item.color = ui.ModernTheme.TEXT_MID;
+			if (item.targetY == 0)
+			{
+				item.alpha = 1;
+				item.color = ui.ModernTheme.TEXT_HI;
+			}
 		}
 		for (text in grpTexts)
 		{
 			text.alpha = 0.6;
-			if(text.ID == curSelected) text.alpha = 1;
+			text.color = ui.ModernTheme.TEXT_DIM;
+			if(text.ID == curSelected)
+			{
+				text.alpha = 1;
+				text.color = ui.ModernTheme.ACCENT;
+			}
 		}
 
 		descBox.setPosition(descText.x - 10, descText.y - 10);

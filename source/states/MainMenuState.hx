@@ -8,6 +8,9 @@ import flixel.util.FlxColor;
 import lime.app.Application;
 import states.editors.MasterEditorMenu;
 import options.OptionsState;
+import ui.ModernPanel;
+import ui.ModernTheme;
+import ui.InputMode;
 
 class MainMenuState extends MusicBeatState
 {
@@ -36,6 +39,14 @@ class MainMenuState extends MusicBeatState
 	var magenta:FlxSprite;
 	var camFollow:FlxObject;
 
+	// Modern UI extras
+	var overlay:FlxSprite;
+	var captionTxt:FlxText;
+	var titleTxt:FlxText;
+	var selectionBar:FlxSprite;
+	var hintTxt:FlxText;
+	var lastInputMode:String = 'keyboard';
+
 	static var showOutdatedWarning:Bool = true;
 
 	override function create()
@@ -53,57 +64,84 @@ class MainMenuState extends MusicBeatState
 
 		persistentUpdate = persistentDraw = true;
 
-		var yScroll:Float = 0.25;
-		bg = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		bg.scrollFactor.set(0, yScroll);
-		bg.setGraphicSize(Std.int(bg.width * 1.175));
-		bg.updateHitbox();
-		bg.screenCenter();
+		bg = ui.FluidBackground.create();
 		add(bg);
 
-		magenta = new FlxSprite(-80).loadGraphic(Paths.image('menuDesat'));
-		magenta.antialiasing = ClientPrefs.data.antialiasing;
-		magenta.scrollFactor.set(0, yScroll);
-		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
+		magenta = new FlxSprite().makeGraphic(1, 1, 0xFFfd719b);
+		magenta.scrollFactor.set();
+		magenta.setGraphicSize(FlxG.width, FlxG.height);
 		magenta.updateHitbox();
-		magenta.screenCenter();
 		magenta.visible = false;
-		magenta.color = 0xFFfd719b;
+		magenta.alpha = 0.35;
 		add(magenta);
 
 		camFollow = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
 
-		// Menu items - left-aligned, 80px from left
-		var startX:Float = 80;
-		var startY:Float = 120;
-		var spacing:Float = 72;
+		// --- Dim layer (glass depth) ---
+		overlay = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, ModernTheme.OVERLAY);
+		overlay.scrollFactor.set();
+		overlay.alpha = 0.3;
+		add(overlay);
+
+		// --- Modern header (top-left) ---  Anyway, you can modify it from here lol
+		captionTxt = new FlxText(64, 64, 0, 'UNKNOWN ENGINE', 18);
+		captionTxt.setFormat(Paths.font(ModernTheme.FONT_MONO), 18, ModernTheme.ACCENT, LEFT);
+		captionTxt.scrollFactor.set();
+		captionTxt.antialiasing = true;
+		add(captionTxt);
+
+		titleTxt = new FlxText(62, 92, 0, Language.getPhrase('mainmenu_engine_title', "Unknown Meaning Funkin'"), 48);
+		titleTxt.setFormat(Paths.font(ModernTheme.FONT), 48, ModernTheme.TEXT_HI, LEFT);
+		titleTxt.scrollFactor.set();
+		titleTxt.antialiasing = true;
+		add(titleTxt);
+
+		// --- Menu items (right column, flat & minimal) ---
+		var colX:Float = FlxG.width * 0.62;
+		var startY:Float = 190.0;
+		var spacing:Float = 88.0;
 
 		for (i in 0...menuItems.length)
 		{
-			var text = new FlxText(startX, startY + i * spacing, 0, Language.getPhrase('menu_${menuKeys[i]}', menuItems[i]), 48);
-			text.setFormat(Paths.font('game_font.ttf'), 48, FlxColor.WHITE, LEFT);
+			var text = new FlxText(colX, startY + i * spacing, 0, Language.getPhrase('menu_${menuKeys[i]}', menuItems[i]), 38);
+			text.setFormat(Paths.font(ModernTheme.FONT), 38, ModernTheme.TEXT_MID, LEFT);
 			text.antialiasing = ClientPrefs.data.antialiasing;
 			text.scrollFactor.set();
 			add(text);
 			menuTexts.push(text);
 		}
 
-		// Version texts
-		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, Language.getPhrase('mainmenu_psych_version', "Psych Engine v{1}").replace('{1}', psychEngineVersion), 12);
-		psychVer.scrollFactor.set();
-		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.LIME, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		add(psychVer);
+		selectionBar = new FlxSprite(colX - 30, startY).makeGraphic(5, 46, ModernTheme.ACCENT);
+		selectionBar.scrollFactor.set();
+		selectionBar.antialiasing = true;
+		add(selectionBar);
 
-		var UEVer:FlxText = new FlxText(12, FlxG.height - 64, 0, Language.getPhrase('mainmenu_unknown_version', "Unknown Engine {1}").replace('{1}', UnknownEngineVersion), 12);
+		// --- Device-aware hint bar (switches between keyboard & gamepad prompts) ---
+		hintTxt = new FlxText(0, FlxG.height - 42, FlxG.width, '', 16);
+		hintTxt.setFormat(Paths.font(ModernTheme.FONT_MONO), 16, ModernTheme.TEXT_DIM, CENTER);
+		hintTxt.scrollFactor.set();
+		add(hintTxt);
+		refreshInputHint();
+
+		// --- Version chip (bottom-left, glass, camera-fixed) ---
+		var verChip:ModernPanel = new ModernPanel(18, FlxG.height - 96, 330, 78);
+		verChip.alpha = 0.55;
+		add(verChip);
+
+		var UEVer:FlxText = new FlxText(34, verChip.y + 10, 0, Language.getPhrase('mainmenu_unknown_version', "Unknown Engine {1}").replace('{1}', UnknownEngineVersion), 14);
+		UEVer.setFormat(Paths.font(ModernTheme.FONT_MONO), 15, ModernTheme.ACCENT, LEFT);
 		UEVer.scrollFactor.set();
-		UEVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.CYAN, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(UEVer);
 
-		var fnfVer:FlxText = new FlxText(12, FlxG.height - 24, 0, Language.getPhrase('mainmenu_fnf_version', "Friday Night Funkin' v{1}").replace('{1}', Application.current.meta.get('version')), 12);
+		var psychVer:FlxText = new FlxText(34, verChip.y + 30, 0, Language.getPhrase('mainmenu_psych_version', "Psych Engine v{1}").replace('{1}', psychEngineVersion), 14);
+		psychVer.setFormat(Paths.font(ModernTheme.FONT_MONO), 15, ModernTheme.ACCENT_PINK, LEFT);
+		psychVer.scrollFactor.set();
+		add(psychVer);
+
+		var fnfVer:FlxText = new FlxText(34, verChip.y + 50, 0, Language.getPhrase('mainmenu_fnf_version', "Friday Night Funkin' v{1}").replace('{1}', Application.current.meta.get('version')), 14);
+		fnfVer.setFormat(Paths.font(ModernTheme.FONT_MONO), 15, ModernTheme.TEXT_MID, LEFT);
 		fnfVer.scrollFactor.set();
-		fnfVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);
 
 		updateSelection();
@@ -131,10 +169,26 @@ class MainMenuState extends MusicBeatState
 	var selectedSomethin:Bool = false;
 	var timeNotMoving:Float = 0;
 
+	function refreshInputHint()
+	{
+		if (hintTxt == null) return;
+		var upDown:String = InputMode.actionLabel('ui_up') + '/' + InputMode.actionLabel('ui_down');
+		var acc:String = InputMode.actionLabel('accept');
+		var back:String = InputMode.actionLabel('back');
+		hintTxt.text = '$upDown 选择    $acc 确认    $back 返回';
+	}
+
 	override function update(elapsed:Float)
 	{
 		if (FlxG.sound.music.volume < 0.8)
 			FlxG.sound.music.volume = Math.min(FlxG.sound.music.volume + 0.5 * elapsed, 0.8);
+
+		InputMode.update();
+		if (InputMode.mode() != lastInputMode)
+		{
+			lastInputMode = InputMode.mode();
+			refreshInputHint();
+		}
 
 		if (!selectedSomethin)
 		{
@@ -261,18 +315,21 @@ class MainMenuState extends MusicBeatState
 
 	function updateSelection()
 	{
+		ui.FluidBackground.kick();
 		for (i in 0...menuTexts.length)
 		{
+			var txt = menuTexts[i];
 			if (i == curSelected)
 			{
-				menuTexts[i].color = FlxColor.YELLOW;
-				menuTexts[i].size = 56;
-				camFollow.y = menuTexts[i].y + menuTexts[i].height / 2;
+				txt.color = ModernTheme.TEXT_HI;
+				if (Math.abs(txt.size - 42) > 0.1) FlxTween.tween(txt, {size: 42}, 0.09);
+				selectionBar.y = txt.y + txt.height / 2 - selectionBar.height / 2;
+				camFollow.y = txt.y + txt.height / 2;
 			}
 			else
 			{
-				menuTexts[i].color = FlxColor.WHITE;
-				menuTexts[i].size = 48;
+				txt.color = ModernTheme.TEXT_MID;
+				if (Math.abs(txt.size - 38) > 0.1) FlxTween.tween(txt, {size: 38}, 0.09);
 			}
 		}
 	}

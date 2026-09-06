@@ -2,6 +2,7 @@ package options;
 
 import states.MainMenuState;
 import backend.StageData;
+import backend.Controls;
 
 class OptionsState extends MusicBeatState
 {
@@ -18,6 +19,7 @@ class OptionsState extends MusicBeatState
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
 	public static var onPlayState:Bool = false;
+	var timeNotMoving:Float = 0;
 
 	function openSelectedSubstate(label:String) {
 		switch(label)
@@ -48,13 +50,13 @@ class OptionsState extends MusicBeatState
 		DiscordClient.changePresence("Options Menu", null);
 		#end
 
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		bg.color = 0xFFea71fd;
-		bg.updateHitbox();
-
-		bg.screenCenter();
+		var bg:FlxSprite = ui.FluidBackground.create();
 		add(bg);
+
+		var ovl:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, ui.ModernTheme.OVERLAY);
+		ovl.scrollFactor.set();
+		ovl.alpha = 0.18;
+		add(ovl);
 
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
@@ -68,8 +70,10 @@ class OptionsState extends MusicBeatState
 		}
 
 		selectorLeft = new Alphabet(0, 0, '>', true);
+		selectorLeft.color = ui.ModernTheme.ACCENT;
 		add(selectorLeft);
 		selectorRight = new Alphabet(0, 0, '<', true);
+		selectorRight.color = ui.ModernTheme.ACCENT;
 		add(selectorRight);
 
 		changeSelection();
@@ -90,6 +94,45 @@ class OptionsState extends MusicBeatState
 	override function update(elapsed:Float) {
 		super.update(elapsed);
 
+		// ---- Mouse support ----
+		if ((FlxG.mouse.deltaScreenX != 0 || FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed)
+		{
+			FlxG.mouse.visible = true;
+			timeNotMoving = 0;
+			Controls.instance.controllerMode = false;
+			for (num => item in grpOptions.members)
+			{
+				if (FlxG.mouse.overlaps(item) && num != curSelected)
+				{
+					changeSelection(num - curSelected);
+					break;
+				}
+			}
+			if (FlxG.mouse.justPressed)
+			{
+				var clicked:Int = -1;
+				for (num => item in grpOptions.members)
+					if (FlxG.mouse.overlaps(item)) { clicked = num; break; }
+				if (clicked >= 0)
+				{
+					curSelected = clicked;
+					openSelectedSubstate(options[curSelected]);
+				}
+			}
+		}
+		else
+		{
+			timeNotMoving += elapsed;
+			if (timeNotMoving > 2.5) FlxG.mouse.visible = false;
+		}
+
+		if (FlxG.mouse.wheel != 0)
+		{
+			FlxG.mouse.visible = true;
+			Controls.instance.controllerMode = false;
+			changeSelection(FlxG.mouse.wheel > 0 ? -1 : 1);
+		}
+
 		if (controls.UI_UP_P)
 			changeSelection(-1);
 		if (controls.UI_DOWN_P)
@@ -97,6 +140,7 @@ class OptionsState extends MusicBeatState
 
 		if (controls.BACK)
 		{
+			FlxG.mouse.visible = false;
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			if(onPlayState)
 			{
@@ -116,10 +160,12 @@ class OptionsState extends MusicBeatState
 		for (num => item in grpOptions.members)
 		{
 			item.targetY = num - curSelected;
-			item.alpha = 0.6;
+			item.alpha = 0.55;
+			item.color = ui.ModernTheme.TEXT_MID;
 			if (item.targetY == 0)
 			{
 				item.alpha = 1;
+				item.color = ui.ModernTheme.TEXT_HI;
 				selectorLeft.x = item.x - 63;
 				selectorLeft.y = item.y;
 				selectorRight.x = item.x + item.width + 15;

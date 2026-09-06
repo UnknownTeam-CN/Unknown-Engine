@@ -67,13 +67,14 @@ class ModsMenuState extends MusicBeatState
 		DiscordClient.changePresence("In the Menus", null);
 		#end
 
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFF665AFF;
-		bg.antialiasing = ClientPrefs.data.antialiasing;
+		bg = ui.FluidBackground.create();
 		add(bg);
-		bg.screenCenter();
+		var modsOvl:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, ui.ModernTheme.OVERLAY);
+		modsOvl.scrollFactor.set();
+		modsOvl.alpha = 0.18;
+		add(modsOvl);
 
-		bgList = FlxSpriteUtil.drawRoundRect(new FlxSprite(40, 40).makeGraphic(340, 440, FlxColor.TRANSPARENT), 0, 0, 340, 440, 15, 15, FlxColor.BLACK);
+		bgList = FlxSpriteUtil.drawRoundRect(new FlxSprite(40, 40).makeGraphic(340, 440, FlxColor.TRANSPARENT), 0, 0, 340, 440, 15, 15, ui.ModernTheme.CARD_FILL);
 		bgList.alpha = 0.6;
 
 		modsGroup = new FlxTypedGroup<ModItem>();
@@ -92,7 +93,6 @@ class ModsMenuState extends MusicBeatState
 		}
 
 		var mod:ModItem = modsGroup.members[curSelectedMod];
-		if(mod != null) bg.color = mod.bgColor;
 
 		//
 		var buttonX = bgList.x;
@@ -178,8 +178,8 @@ class ModsMenuState extends MusicBeatState
 		}
 		//
 
-		bgTitle = FlxSpriteUtil.drawRoundRectComplex(new FlxSprite(bgList.x + bgList.width + 20, 40).makeGraphic(840, 180, FlxColor.TRANSPARENT), 0, 0, 840, 180, 15, 15, 0, 0, FlxColor.BLACK);
-		bgTitle.alpha = 0.6;
+		bgTitle = FlxSpriteUtil.drawRoundRectComplex(new FlxSprite(bgList.x + bgList.width + 20, 40).makeGraphic(840, 180, FlxColor.TRANSPARENT), 0, 0, 840, 180, 15, 15, 0, 0, ui.ModernTheme.CARD_FILL);
+		bgTitle.alpha = 0.78;
 		add(bgTitle);
 
 		icon = new FlxSprite(bgTitle.x + 15, bgTitle.y + 15);
@@ -190,8 +190,8 @@ class ModsMenuState extends MusicBeatState
 		modName.scaleY = 0.8;
 		add(modName);
 
-		bgDescription = FlxSpriteUtil.drawRoundRectComplex(new FlxSprite(bgTitle.x, bgTitle.y + 200).makeGraphic(840, 450, FlxColor.TRANSPARENT), 0, 0, 840, 450, 0, 0, 15, 15, FlxColor.BLACK);
-		bgDescription.alpha = 0.6;
+		bgDescription = FlxSpriteUtil.drawRoundRectComplex(new FlxSprite(bgTitle.x, bgTitle.y + 200).makeGraphic(840, 450, FlxColor.TRANSPARENT), 0, 0, 840, 450, 0, 0, 15, 15, ui.ModernTheme.CARD_FILL);
+		bgDescription.alpha = 0.78;
 		add(bgDescription);
 		
 		modDesc = new FlxText(bgDescription.x + 15, bgDescription.y + 15, bgDescription.width - 30, "", 24);
@@ -667,7 +667,7 @@ class ModsMenuState extends MusicBeatState
 		if(curMod == null) return;
 
 		FlxTween.cancelTweensOf(bg);
-		FlxTween.color(bg, 1, bg.color, curMod.bgColor);
+		ui.FluidBackground.kick();
 
 		if(Math.abs(centerMod - curSelectedMod) > 2)
 		{

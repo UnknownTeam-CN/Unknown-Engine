@@ -57,6 +57,10 @@ class ControlsSubState extends MusicBeatSubstate
 	var gamepadColor:FlxColor = 0xfffd7194;
 	var keyboardColor:FlxColor = 0xff7192fd;
 	var onKeyboardMode:Bool = true;
+	var ctrlText:Alphabet;
+	var ctrlHint:FlxText;
+	var bindClicked:Bool = false;
+	var timeNotMoving:Float = 0;
 	
 	var controllerSpr:FlxSprite;
 	
@@ -91,9 +95,9 @@ class ControlsSubState extends MusicBeatSubstate
 		grpBlacks = new FlxTypedGroup<AttachedSprite>();
 		add(grpBlacks);
 		selectSpr = new AttachedSprite();
-		selectSpr.makeGraphic(250, 78, FlxColor.WHITE);
+		selectSpr.makeGraphic(250, 78, ui.ModernTheme.ACCENT);
 		selectSpr.copyAlpha = false;
-		selectSpr.alpha = 0.75;
+		selectSpr.alpha = 0.32;
 		add(selectSpr);
 		grpBinds = new FlxTypedGroup<Alphabet>();
 		add(grpBinds);
@@ -104,11 +108,18 @@ class ControlsSubState extends MusicBeatSubstate
 		controllerSpr.animation.add('gamepad', [1], 1, false);
 		add(controllerSpr);
 
-		var text:Alphabet = new Alphabet(60, 90, 'C   T   R   L', false);
-		text.alignment = CENTERED;
-		text.setScale(0.4);
-		//text.letterSpacing = 15;
-		add(text);
+		ctrlText = new Alphabet(60, 96, '', false);
+		ctrlText.alignment = LEFT;
+		ctrlText.setScale(0.4);
+		ctrlText.color = ui.ModernTheme.ACCENT;
+		add(ctrlText);
+
+		ctrlHint = new FlxText(62, 122, 280, Language.getPhrase('controls_switch_hint', 'Ctrl / LB RB — switch mode'), 13);
+		ctrlHint.setFormat(Paths.font('editor_font.ttf'), 13, ui.ModernTheme.TEXT_MID, LEFT);
+		ctrlHint.scrollFactor.set();
+		add(ctrlHint);
+
+		refreshModeLabel();
 		createTexts();
 	}
 
@@ -140,7 +151,7 @@ class ControlsSubState extends MusicBeatSubstate
 					var str:String = option[1];
 					var keyStr:String = option[2];
 					if(isDefaultKey) str = Language.getPhrase(str);
-					var text:Alphabet = new Alphabet(475, 280, !isDisplayKey ? Language.getPhrase('key_$keyStr', str) : Language.getPhrase('keygroup_$str', str), !isDisplayKey);
+					var text:Alphabet = new Alphabet(210, 300, !isDisplayKey ? Language.getPhrase('key_$keyStr', str) : Language.getPhrase('keygroup_$str', str), !isDisplayKey);
 					text.isMenuItem = true;
 					text.changeX = false;
 					text.distancePerItem.y = 60;
@@ -150,7 +161,7 @@ class ControlsSubState extends MusicBeatSubstate
 
 					if(!isDisplayKey)
 					{
-						text.alignment = RIGHT;
+						text.alignment = LEFT;
 						grpOptions.add(text);
 						curOptions.push(i);
 						curOptionsValid.push(myID);
@@ -172,7 +183,8 @@ class ControlsSubState extends MusicBeatSubstate
 	function addCenteredText(text:Alphabet, option:Array<Dynamic>, id:Int)
 	{
 		text.alignment = LEFT;
-		text.screenCenter(X);
+		text.x = 200;
+		text.startPosition.x = 200;
 		text.y -= 35;
 		text.startPosition.y -= 35;
 	}
@@ -194,7 +206,7 @@ class ControlsSubState extends MusicBeatSubstate
 			else
 				key = InputFormatter.getGamepadName((gmpds[n] != null) ? gmpds[n] : NONE);
 
-			var attach:Alphabet = new Alphabet(560 + n * 300, 268, key, false);
+			var attach:Alphabet = new Alphabet(560 + n * 300, 300, key, false);
 			attach.isMenuItem = true;
 			attach.changeX = false;
 			attach.distancePerItem.y = 60;
@@ -208,13 +220,14 @@ class ControlsSubState extends MusicBeatSubstate
 			attach.scaleX = Math.min(1, 230 / attach.width);
 			//attach.text = key;
 
-			// spawn black bars at the right of the key name
+			// rounded grey chip behind each bind slot
 			var black:AttachedSprite = new AttachedSprite();
-			black.makeGraphic(250, 78, FlxColor.BLACK);
-			black.alphaMult = 0.4;
+			black.makeGraphic(250, 78, FlxColor.TRANSPARENT);
+			flixel.util.FlxSpriteUtil.drawRoundRect(black, 0, 0, 250, 78, 16, 16, ui.ModernTheme.CARD_ALT_FILL);
+			black.alphaMult = 0.6;
 			black.sprTracker = text;
 			black.yAdd = -6;
-			black.xAdd = 75 + n * 300;
+			black.xAdd = 350 + n * 300;
 			grpBlacks.add(black);
 		}
 	}
@@ -293,15 +306,57 @@ class ControlsSubState extends MusicBeatSubstate
 			if(FlxG.keys.justPressed.UP || FlxG.gamepads.anyJustPressed(DPAD_UP) || FlxG.gamepads.anyJustPressed(LEFT_STICK_DIGITAL_UP)) updateText(-1);
 			else if(FlxG.keys.justPressed.DOWN || FlxG.gamepads.anyJustPressed(DPAD_DOWN) || FlxG.gamepads.anyJustPressed(LEFT_STICK_DIGITAL_DOWN)) updateText(1);
 
-			if(FlxG.keys.justPressed.ENTER || FlxG.gamepads.anyJustPressed(START) || FlxG.gamepads.anyJustPressed(A))
+			// ---- Mouse support ----
+			if ((FlxG.mouse.deltaScreenX != 0 || FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed)
+			{
+				FlxG.mouse.visible = true;
+				Controls.instance.controllerMode = false;
+				timeNotMoving = 0;
+				if (grpOptions.length > 0)
+				{
+					var best:Int = -1;
+					var bestDy:Float = 9999;
+					for (idx => item in grpOptions.members)
+					{
+						if (item == null) continue;
+						var cy:Float = item.y + item.height / 2;
+						var dy:Float = Math.abs(FlxG.mouse.y - cy);
+						if (dy < bestDy)
+						{
+							bestDy = dy;
+							best = idx;
+						}
+					}
+					if (best >= 0 && bestDy < 60 && best != curSelected)
+						updateText(best - curSelected);
+					if (FlxG.mouse.justPressed && best >= 0 && bestDy < 60)
+					{
+						curAlt = (FlxG.mouse.x > 700);
+						bindClicked = true;
+					}
+				}
+			}
+			else
+			{
+				timeNotMoving += elapsed;
+				if (timeNotMoving > 2.5) FlxG.mouse.visible = false;
+			}
+			if (FlxG.mouse.wheel != 0)
+			{
+				FlxG.mouse.visible = true;
+				Controls.instance.controllerMode = false;
+				updateText(FlxG.mouse.wheel > 0 ? -1 : 1);
+			}
+
+			if(FlxG.keys.justPressed.ENTER || FlxG.gamepads.anyJustPressed(START) || FlxG.gamepads.anyJustPressed(A) || bindClicked)
 			{
 				if(options[curOptions[curSelected]][1] != defaultKey)
 				{
-					bindingBlack = new FlxSprite().makeGraphic(1, 1, /*FlxColor.BLACK*/ FlxColor.WHITE);
+					bindingBlack = new FlxSprite().makeGraphic(1, 1, ui.ModernTheme.OVERLAY);
 					bindingBlack.scale.set(FlxG.width, FlxG.height);
 					bindingBlack.updateHitbox();
 					bindingBlack.alpha = 0;
-					FlxTween.tween(bindingBlack, {alpha: 0.6}, 0.35, {ease: FlxEase.linear});
+					FlxTween.tween(bindingBlack, {alpha: 0.85}, 0.35, {ease: FlxEase.linear});
 					add(bindingBlack);
 
 					bindingText = new Alphabet(FlxG.width / 2, 160, Language.getPhrase('controls_rebinding', 'Rebinding {1}', [options[curOptions[curSelected]][3]]), false);
@@ -329,6 +384,7 @@ class ControlsSubState extends MusicBeatSubstate
 					FlxG.sound.play(Paths.sound('cancelMenu'));
 				}
 			}
+			bindClicked = false;
 		}
 		else
 		{
@@ -499,6 +555,17 @@ class ControlsSubState extends MusicBeatSubstate
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
+	function refreshModeLabel()
+	{
+		if (ctrlText == null) return;
+		ctrlText.text = onKeyboardMode
+			? Language.getPhrase('controls_mode_keyboard', 'KEYBOARD')
+			: Language.getPhrase('controls_mode_gamepad', 'GAMEPAD');
+		ctrlText.color = onKeyboardMode ? ui.ModernTheme.ACCENT : ui.ModernTheme.ACCENT_PINK;
+		if (ctrlHint != null)
+			ctrlHint.text = Language.getPhrase('controls_switch_hint', 'Ctrl / LB RB — switch mode');
+	}
+
 	function swapMode()
 	{
 		FlxTween.cancelTweensOf(bg);
@@ -509,6 +576,7 @@ class ControlsSubState extends MusicBeatSubstate
 		curAlt = false;
 		controllerSpr.animation.play(onKeyboardMode ? 'keyboard' : 'gamepad');
 		createTexts();
+		refreshModeLabel();
 	}
 
 	function updateAlt(?doSwap:Bool = false)

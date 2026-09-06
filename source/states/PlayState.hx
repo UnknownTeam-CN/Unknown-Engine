@@ -1,4 +1,4 @@
-﻿package states;
+package states;
 
 import backend.Difficulty;
 import backend.Highscore;
@@ -1920,6 +1920,15 @@ class PlayState extends MusicBeatState
 
 		super.update(elapsed);
 
+		// Icon bop: lerp the icons' scale back to 1 every frame so that the
+		// scale (1.2, 1.2) set in beatHit() actually "bounces" instead of staying
+		// permanently enlarged. (This per-frame falloff was dropped in the port.)
+		if (iconP1 != null && iconP2 != null)
+		{
+			iconP1.scale.set(FlxMath.lerp(1, iconP1.scale.x, 0.85), FlxMath.lerp(1, iconP1.scale.y, 0.85));
+			iconP2.scale.set(FlxMath.lerp(1, iconP2.scale.x, 0.85), FlxMath.lerp(1, iconP2.scale.y, 0.85));
+		}
+
 		setOnScripts('curDecStep', curDecStep);
 		setOnScripts('curDecBeat', curDecBeat);
 
@@ -2096,25 +2105,43 @@ class PlayState extends MusicBeatState
 		setOnScripts('botPlay', cpuControlled);
 		callOnScripts('onUpdatePost', [elapsed]);
 
-		// Replay recording
+		// Replay recording (alloc-free while nothing changes: compares live keys to the
+		// last keyframe and only builds/pushes a new keyframe when a state actually changes)
 		if (!cpuControlled && !loadRep && startedCountdown && !paused && !endingSong && generatedMusic)
 		{
-			var held:Array<Bool> = [];
-			for (key in keysArray)
-				held.push(controls.pressed(key));
-
 			if (replayInputFrames.length == 0)
 			{
 				replayInputFrames.push({t: 0.0, k: [false, false, false, false]});
-				if (held.contains(true))
-					replayInputFrames.push({t: Conductor.songPosition, k: held});
+				for (key in keysArray)
+					if (controls.pressed(key))
+					{
+						replayInputFrames.push({t: Conductor.songPosition, k: getRecordHeld()});
+						break;
+					}
 			}
-			else if (!arrayEqualsBool(held, replayInputFrames[replayInputFrames.length - 1].k))
+			else
 			{
-				replayInputFrames.push({t: Conductor.songPosition, k: held});
+				var lastK:Array<Bool> = replayInputFrames[replayInputFrames.length - 1].k;
+				for (i in 0...keysArray.length)
+				{
+					if (controls.pressed(keysArray[i]) != lastK[i])
+					{
+						replayInputFrames.push({t: Conductor.songPosition, k: getRecordHeld()});
+						break;
+					}
+				}
 			}
 		}
 
+	}
+
+	/** Builds the current held-keys array (only called when a replay keyframe is actually recorded). */
+	function getRecordHeld():Array<Bool>
+	{
+		var held:Array<Bool> = [];
+		for (key in keysArray)
+			held.push(controls.pressed(key));
+		return held;
 	}
 
 	var iconsAnimations:Bool = true;
@@ -2920,6 +2947,15 @@ class PlayState extends MusicBeatState
 			// 回放模式结束 — 打开 ReplayOverSubstate（重新播放 / 退出播放）
 			FlxG.sound.music.stop();
 			openSubState(new substates.ReplayOverSubstate());
+		}
+		else if (chartingMode)
+		{
+			// 试玩（预览谱面 / 做谱模式，通过 Chart Editor 的 Enter 启动）结束 —
+			// 不进入结算屏，直接返回 Chart Editor 继续做谱。
+			// 注意：不要在此把 chartingMode 置 false，否则回到编辑器后再次 Enter 试玩
+			// 仍会被结算屏拦截；正常从编辑器点 Exit 时才会重置 chartingMode。
+			FlxG.sound.music.stop();
+			MusicBeatState.switchState(new ChartingState());
 		}
 		else if (isStoryMode)
 		{
@@ -3938,6 +3974,16 @@ class PlayState extends MusicBeatState
 
 		iconP1.updateHitbox();
 		iconP2.updateHitbox();
+
+		// Icon angle bop (ported from Gazozoz's onBeatHit modchart)
+		// Odd beat: iconP2 = +20, iconP1 = -20 ; Even beat: flipped. Tween back to 0.
+		var evenBeat:Bool = (curBeat % 2 == 0);
+		FlxTween.cancelTweensOf(iconP1, ["angle"]);
+		FlxTween.cancelTweensOf(iconP2, ["angle"]);
+		iconP1.angle = evenBeat ? 20 : -20;
+		iconP2.angle = evenBeat ? -20 : 20;
+		FlxTween.tween(iconP1, {angle: 0}, 0.2, {ease: FlxEase.cubeOut});
+		FlxTween.tween(iconP2, {angle: 0}, 0.2, {ease: FlxEase.cubeOut});
 
 		characterBopper(curBeat);
 

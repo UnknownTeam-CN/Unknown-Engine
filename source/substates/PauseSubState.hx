@@ -67,7 +67,7 @@ class PauseSubState extends MusicBeatSubstate
 
 		FlxG.sound.list.add(pauseMusic);
 
-		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, ui.ModernTheme.OVERLAY);
 		bg.scale.set(FlxG.width, FlxG.height);
 		bg.updateHitbox();
 		bg.alpha = 0;
@@ -117,7 +117,7 @@ class PauseSubState extends MusicBeatSubstate
 		levelDifficulty.x = FlxG.width - (levelDifficulty.width + 20);
 		blueballedTxt.x = FlxG.width - (blueballedTxt.width + 20);
 
-		FlxTween.tween(bg, {alpha: 0.6}, 0.4, {ease: FlxEase.quartInOut});
+		FlxTween.tween(bg, {alpha: 0.78}, 0.4, {ease: FlxEase.quartInOut});
 		FlxTween.tween(levelInfo, {alpha: 1, y: 20}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.3});
 		FlxTween.tween(levelDifficulty, {alpha: 1, y: levelDifficulty.y + 5}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.5});
 		FlxTween.tween(blueballedTxt, {alpha: 1, y: blueballedTxt.y + 5}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.7});
@@ -138,6 +138,13 @@ class PauseSubState extends MusicBeatSubstate
 		missingText.visible = false;
 		add(missingText);
 
+		// Device-aware hint bar (bottom-left)
+		hintTxt = new FlxText(20, FlxG.height - 40, FlxG.width - 40, '', 16);
+		hintTxt.setFormat(Paths.font('vcr.ttf'), 16, ui.ModernTheme.TEXT_DIM, LEFT);
+		hintTxt.scrollFactor.set();
+		add(hintTxt);
+		refreshPauseHint();
+
 		regenMenu();
 		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
 
@@ -155,6 +162,8 @@ class PauseSubState extends MusicBeatSubstate
 
 	var holdTime:Float = 0;
 	var cantUnpause:Float = 0.1;
+	var hintTxt:FlxText;
+	var lastInputMode:String = 'keyboard';
 	override function update(elapsed:Float)
 	{
 		cantUnpause -= elapsed;
@@ -162,6 +171,13 @@ class PauseSubState extends MusicBeatSubstate
 			pauseMusic.volume += 0.01 * elapsed;
 
 		super.update(elapsed);
+
+		ui.InputMode.update();
+		if (ui.InputMode.mode() != lastInputMode)
+		{
+			lastInputMode = ui.InputMode.mode();
+			refreshPauseHint();
+		}
 
 		if(controls.BACK)
 		{
@@ -371,6 +387,15 @@ class PauseSubState extends MusicBeatSubstate
 		super.destroy();
 	}
 
+	function refreshPauseHint()
+	{
+		if (hintTxt == null) return;
+		var upDown:String = ui.InputMode.actionLabel('ui_up') + '/' + ui.InputMode.actionLabel('ui_down');
+		var acc:String = ui.InputMode.actionLabel('accept');
+		var back:String = ui.InputMode.actionLabel('back');
+		hintTxt.text = '$upDown 选择    $acc 确认    $back 取消';
+	}
+
 	function changeSelection(change:Int = 0):Void
 	{
 		curSelected = FlxMath.wrap(curSelected + change, 0, menuItems.length - 1);
@@ -378,9 +403,11 @@ class PauseSubState extends MusicBeatSubstate
 		{
 			item.targetY = num - curSelected;
 			item.alpha = 0.6;
+			item.color = ui.ModernTheme.TEXT_MID;
 			if (item.targetY == 0)
 			{
 				item.alpha = 1;
+				item.color = ui.ModernTheme.ACCENT;
 				if(item == skipTimeTracker)
 				{
 					curTime = Math.max(0, Conductor.songPosition);
