@@ -48,9 +48,6 @@ class StoryMenuState extends MusicBeatState
 		Paths.clearStoredMemory();
 		Paths.clearUnusedMemory();
 
-		var fluidBG:FlxSprite = ui.FluidBackground.create();
-		add(fluidBG);
-
 		persistentUpdate = persistentDraw = true;
 		PlayState.isStoryMode = true;
 		WeekData.reloadWeekFiles(true);

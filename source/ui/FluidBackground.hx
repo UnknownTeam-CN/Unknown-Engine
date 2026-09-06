@@ -5,87 +5,82 @@ import flixel.FlxSprite;
 import openfl.display.BitmapData;
 
 /**
-	"Fluid" menu background — stable implementation:
-	the accent-gradient bitmap itself is pre-blended (no shader needed), and motion is
-	faked by slowly panning the oversized sprite. kick() briefly increases the drift.
+	Fluid wave menu background (shader singleton + fresh bitmap per entry).
+	Each state entry generates its OWN bitmap (nothing shared with destroyed states),
+	and a single long-lived FluidMotionShader is reused for the wave motion.
  */
 class FluidBackground
 {
-	// palette accents (cyan / pink / light blue)
 	public static var COLOR_R:Int = ui.ModernTheme.ACCENT;
 	public static var COLOR_G:Int = ui.ModernTheme.ACCENT_PINK;
 	public static var COLOR_B:Int = 0xFF7FA8FF;
 
 	public static var FLUID_ENABLED:Bool = true;
-	public static var TIME_SPEED:Float = 0.5;
-	public static var KICK_BOOST:Float = 3.5;
+	public static var X_FREQ:Float = 6.0;
+	public static var Y_FREQ:Float = 5.0;
+	public static var BASE_DIV:Float = 6.0;
+	public static var TIME_SPEED:Float = 0.3;
+	public static var SPEED_BOOST:Float = 10;
 
-	static var cachedBmp:BitmapData = null;
-	static var layers:Array<FlxSprite> = [];
-	static var kicks:Array<Float> = [];
+	static var sharedShader:FluidMotionShader = null;
 	static var motionTime:Float = 0;
-
-	static var EDGE:Int = 64; // overscan in px so panning never reveals the window edge
 
 	public static function updateMotion(elapsed:Float):Void
 	{
-		if (layers.length == 0) return;
+		if (sharedShader == null) return;
+		var m:FluidMotionShader = sharedShader;
 		var boost:Float = 1;
-		for (i in 0...layers.length)
+		if (m.kick > 0)
 		{
-			var s:FlxSprite = layers[i];
-			if (s == null) continue;
-			var kick:Float = 0;
-			if (i < kicks.length) kick = kicks[i];
-			if (kick > 0)
-			{
-				kick -= elapsed * 4.0;
-				if (kick < 0) kick = 0;
-				kicks[i] = kick;
-				boost = 1 + kick * (KICK_BOOST - 1);
-			}
-			var amp:Float = 14 * boost;
-			var ph:Float = i * 1.9;
-			s.x = -EDGE + Math.sin(motionTime * 0.7 + ph) * amp;
-			s.y = -EDGE + Math.cos(motionTime * 0.55 + ph * 0.7) * amp;
+			m.kick -= elapsed * 4.2;
+			if (m.kick < 0) m.kick = 0;
+			boost = 1 + m.kick * (SPEED_BOOST - 1);
 		}
+		m.iTime.value[0] = motionTime;
+		m.xwave.value[0] = X_FREQ;
+		m.ywave.value[0] = Y_FREQ;
+		m.xtime.value[0] = BASE_DIV;
+		m.ytime.value[0] = BASE_DIV;
 		motionTime += elapsed * TIME_SPEED * boost;
 	}
 
 	public static function kick():Void
 	{
-		for (i in 0...kicks.length)
-			kicks[i] = 1;
+		if (sharedShader != null) sharedShader.kick = 1;
 	}
 
 	public static function create():FlxSprite
 	{
 		if (!FLUID_ENABLED) return makeBlack();
 
-		var bmp:BitmapData = getBitmap();
+		// fresh bitmap every entry — never reuse a bitmap that a destroyed state owned
+		var bmp:BitmapData = generateBitmap();
 		if (bmp == null) return makeBlack();
 
+		if (sharedShader == null)
+		{
+			sharedShader = new FluidMotionShader();
+			sharedShader.iTime.value = [0];
+			sharedShader.xwave.value = [X_FREQ];
+			sharedShader.ywave.value = [Y_FREQ];
+			sharedShader.xtime.value = [BASE_DIV];
+			sharedShader.ytime.value = [BASE_DIV];
+			sharedShader.uColorR.value = colorToVec(COLOR_R);
+			sharedShader.uColorG.value = colorToVec(COLOR_G);
+			sharedShader.uColorB.value = colorToVec(COLOR_B);
+			sharedShader.kick = 0;
+		}
+
 		var bg:FlxSprite = new FlxSprite().loadGraphic(bmp);
-		bg.setGraphicSize(FlxG.width + EDGE * 2, FlxG.height + EDGE * 2);
+		bg.shader = sharedShader;
+		bg.setGraphicSize(FlxG.width, FlxG.height);
 		bg.updateHitbox();
-		bg.x = -EDGE;
-		bg.y = -EDGE;
 		bg.scrollFactor.set();
 		bg.antialiasing = ClientPrefs.data.antialiasing;
-
-		layers.push(bg);
-		kicks.push(0);
 		return bg;
 	}
 
-	static function getBitmap():BitmapData
-	{
-		if (cachedBmp != null) return cachedBmp;
-		cachedBmp = generateBitmap();
-		return cachedBmp;
-	}
-
-	/** three soft accent glows blended onto a deep slate base */
+	/** raw RGB channel map; the shader tints R/G/B -> theme accents */
 	static function generateBitmap():BitmapData
 	{
 		var w:Int = 256;
@@ -108,33 +103,29 @@ class FluidBackground
 					else if (i == 1) g = v;
 					else b = v;
 				}
-				var cr:Float = r * ((COLOR_R >> 16) & 0xFF) / 255
-					+ g * ((COLOR_G >> 16) & 0xFF) / 255
-					+ b * ((COLOR_B >> 16) & 0xFF) / 255;
-				var cg:Float = r * ((COLOR_R >> 8) & 0xFF) / 255
-					+ g * ((COLOR_G >> 8) & 0xFF) / 255
-					+ b * ((COLOR_B >> 8) & 0xFF) / 255;
-				var cb:Float = r * (COLOR_R & 0xFF) / 255
-					+ g * (COLOR_G & 0xFF) / 255
-					+ b * (COLOR_B & 0xFF) / 255;
-
-				// subtle vertical gradient for depth
-				var vy:Float = 1 - (y / h) * 0.25;
-				var fr:Float = 0.03 + cr * 0.75 * vy;
-				var fg:Float = 0.045 + cg * 0.75 * vy;
-				var fb:Float = 0.08 + cb * 0.75 * vy;
+				var vy:Float = 1 - (y / h) * 0.2;
+				var fr:Float = (0.05 + r * 0.95) * vy;
+				var fg:Float = (0.06 + g * 0.95) * vy;
+				var fb:Float = (0.09 + b * 0.95) * vy;
 				if (fr > 1) fr = 1;
 				if (fg > 1) fg = 1;
 				if (fb > 1) fb = 1;
-
-				var col:Int = (0xFF << 24)
+				bmp.setPixel32(x, y, (0xFF << 24)
 					| (Std.int(fr * 255) << 16)
 					| (Std.int(fg * 255) << 8)
-					| Std.int(fb * 255);
-				bmp.setPixel32(x, y, col);
+					| Std.int(fb * 255));
 			}
 		}
 		return bmp;
+	}
+
+	static function colorToVec(c:Int):Array<Float>
+	{
+		return [
+			((c >> 16) & 0xFF) / 255,
+			((c >> 8) & 0xFF) / 255,
+			(c & 0xFF) / 255
+		];
 	}
 
 	static function makeBlack():FlxSprite

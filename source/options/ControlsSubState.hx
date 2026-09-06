@@ -171,8 +171,8 @@ class ControlsSubState extends MusicBeatSubstate
 					if(isCentered) addCenteredText(text, option, myID);
 					else addKeyText(text, option, myID);
 
-					text.snapToPosition();
-					text.y += FlxG.height * 2;
+					//atext.snapToPosition();
+					//text.y += FlxG.height * 2;
 				}
 				myID++;
 			}
@@ -256,7 +256,7 @@ class ControlsSubState extends MusicBeatSubstate
 	function updateBind(num:Int, text:String)
 	{
 		var bind:Alphabet = grpBinds.members[num];
-		var attach:Alphabet = new Alphabet(350 + (num % 2) * 300, 248, text, false);
+		var attach:Alphabet = new Alphabet(bind.x, bind.y, text, false);
 		attach.isMenuItem = true;
 		attach.changeX = false;
 		attach.distancePerItem.y = 60;
