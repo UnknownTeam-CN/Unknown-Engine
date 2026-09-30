@@ -52,9 +52,5 @@ There you can learn how to use the 212 PlayState funcions in your mod!
 Audio Support Extended(MP3, wav, flac--Open in exprimental options)
 
 
-## Multiple editors to assist you in making your own Mod
-![Master Editor Menu](docs/img/editors.png)
-* Working both for Source code modding and Downloaded builds!
-
 
 ####Unknown Engine by Pandaman, Psych Engine by ShadowMario, Friday Night Funkin' by ninjamuffin99
