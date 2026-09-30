@@ -12,7 +12,8 @@ class OptionsState extends MusicBeatState
 		'Adjust Delay and Combo',
 		'Graphics',
 		'Visuals',
-		'Gameplay'
+		'Gameplay',
+		'Experimental'
 		#if TRANSLATIONS_ALLOWED , 'Language' #end
 	];
 	private var grpOptions:FlxTypedGroup<Alphabet>;
@@ -32,9 +33,13 @@ class OptionsState extends MusicBeatState
 				openSubState(new options.GraphicsSettingsSubState());
 			case 'Visuals':
 				openSubState(new options.VisualsSettingsSubState());
-			case 'Gameplay':
-				openSubState(new options.GameplaySettingsSubState());
-			case 'Adjust Delay and Combo':
+		case 'Gameplay':
+			openSubState(new options.GameplaySettingsSubState());
+		case 'Experimental':
+			openSubState(new options.ExperimentalSettingsSubState());
+		case 'Audio':
+			openSubState(new options.AudioSettingsSubState());
+		case 'Adjust Delay and Combo':
 				MusicBeatState.switchState(new options.NoteOffsetState());
 			case 'Language':
 				openSubState(new options.LanguageSubState());
@@ -61,11 +66,13 @@ class OptionsState extends MusicBeatState
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
 
+		if (ClientPrefs.data.easterEggUnlocked)
+			options.push('Audio');
+
 		for (num => option in options)
 		{
 			var optionText:Alphabet = new Alphabet(0, 0, Language.getPhrase('options_$option', option), true);
 			optionText.screenCenter();
-			optionText.y += (92 * (num - (options.length / 2))) + 45;
 			grpOptions.add(optionText);
 		}
 
@@ -156,16 +163,14 @@ class OptionsState extends MusicBeatState
 	function changeSelection(change:Int = 0)
 	{
 		curSelected = FlxMath.wrap(curSelected + change, 0, options.length - 1);
+		layoutOptions();
 
 		for (num => item in grpOptions.members)
 		{
-			item.targetY = num - curSelected;
-			item.alpha = 0.55;
-			item.color = ui.ModernTheme.TEXT_MID;
-			if (item.targetY == 0)
+			item.alpha = (num == curSelected) ? 1 : 0.55;
+			item.color = (num == curSelected) ? ui.ModernTheme.TEXT_HI : ui.ModernTheme.TEXT_MID;
+			if (num == curSelected)
 			{
-				item.alpha = 1;
-				item.color = ui.ModernTheme.TEXT_HI;
 				selectorLeft.x = item.x - 63;
 				selectorLeft.y = item.y;
 				selectorRight.x = item.x + item.width + 15;
@@ -173,6 +178,34 @@ class OptionsState extends MusicBeatState
 			}
 		}
 		FlxG.sound.play(Paths.sound('scrollMenu'));
+	}
+
+	function layoutOptions()
+	{
+		var spacing:Float = 92;
+		var top:Float = 80;
+		var bottom:Float = FlxG.height - 80;
+		var viewH:Float = bottom - top;
+		var totalH:Float = (options.length - 1) * spacing;
+		var scrollY:Float = 0;
+
+		if (totalH > viewH)
+		{
+			var visRows:Float = viewH / spacing;
+			var focusY:Float = top + (visRows / 2) * spacing;
+			scrollY = focusY - (top + curSelected * spacing);
+			var minScroll:Float = bottom - (top + totalH);
+			if (scrollY > 0) scrollY = 0;
+			if (scrollY < minScroll) scrollY = minScroll;
+		}
+		else
+		{
+			var listCenter:Float = (top + bottom) / 2;
+			scrollY = listCenter - (top + ((options.length - 1) / 2) * spacing);
+		}
+
+		for (num => item in grpOptions.members)
+			item.y = top + num * spacing + scrollY;
 	}
 
 	override function destroy()

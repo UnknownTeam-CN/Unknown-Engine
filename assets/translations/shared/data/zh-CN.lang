@@ -65,7 +65,15 @@ musicplayer_paused: "正在播放: {1} (已暂停)"
 musicplayer_tip: "按 SPACE 暂停 / 按 ESC 退出 / 按 R 重置歌曲"
 
 // Options
+options_experimental: "实验性选项"
+setting_audio_support_extend: "音频支持扩展"
+description_audio_support_extend: "允许加载 OGG 以外的音频格式（MP3、WAV、FLAC 等）。部分平台可能无法播放。"
+
 setting_scroll_type: "滚动类型"
+options_audio: "音频"
+credits_easter_egg: "彩蛋音效已解锁！前往「选项 → 音频」中开关。"
+setting_easter_egg_sound: "彩蛋音效"
+description_easter_egg_sound: "用隐藏的彩蛋音效替换部分菜单 / 操作音效。在 Credits 界面输入秘籍解锁。"
 setting_scroll_speed: "滚动速度"
 setting_playback_rate: "播放速率"
 setting_health_gain_multiplier: "生命值获取倍率"
@@ -221,6 +229,7 @@ options_graphics: "画面"
 options_visuals: "视觉"
 options_gameplay: "游戏"
 options_language: "语言"
+language_select_title: "语言"
 
 reset_achievement: "重置成就:"
 
@@ -878,3 +887,11 @@ discord_chart_detail: "歌曲: {1}"
 
 // 角色加载错误
 char_load_error: "错误:\n{1}"
+
+// 现代 UI（Unknown Engine）
+mainmenu_engine_title: "Unknown Meaning Funkin'"
+credits_teams: "团队"
+credits_hint: "点击 / 滚轮浏览    点击成员打开链接    ESC 返回"
+controls_mode_keyboard: "键盘模式"
+controls_mode_gamepad: "手柄模式"
+controls_switch_hint: "Ctrl / LB RB — 切换模式"

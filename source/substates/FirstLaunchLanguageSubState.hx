@@ -78,8 +78,8 @@ class FirstLaunchLanguageSubState extends MusicBeatSubstate
 			curSelected = 0;
 
 		// 标题 "Language / 语言"
-		titleText = new FlxText(0, 0, FlxG.width, 'Language / 語言');
-		titleText.setFormat(Alphabet.CJK_FONT_PATH, 48, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleText = new FlxText(0, 0, FlxG.width, Language.getPhrase('language_select_title', 'Language / 语言'));
+		titleText.setFormat(Alphabet.GAME_FONT_PATH, 48, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.y = FlxG.height * 0.3 - titleText.height - 20;
 		titleText.alpha = 0;
 		add(titleText);

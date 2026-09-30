@@ -3,6 +3,7 @@ package states;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
+import flixel.input.keyboard.FlxKey;
 import ui.ModernPanel;
 import ui.ModernTheme;
 
@@ -38,6 +39,8 @@ class CreditsState extends MusicBeatState
 	var rowStep:Float = 84;
 	var rowTop:Float = 100;
 	var hintText:FlxText;
+	var eggProgress:Int = 0;
+	var eggHintText:FlxText;
 
 	var timeNotMoving:Float = 0;
 
@@ -123,6 +126,8 @@ class CreditsState extends MusicBeatState
 
 		rebuildMembers();
 		applyCategoryColor();
+		if (ClientPrefs.data.easterEggUnlocked) showEggHint();
+
 	}
 
 	function buildCategories()
@@ -442,6 +447,8 @@ class CreditsState extends MusicBeatState
 			MusicBeatState.switchState(new MainMenuState());
 		}
 
+		checkEggCode();
+
 		super.update(elapsed);
 	}
 
@@ -466,4 +473,44 @@ class CreditsState extends MusicBeatState
 		}
 	}
 	#end
+
+	function checkEggCode()
+	{
+		var pressed:String = '';
+		if (FlxG.keys.anyJustPressed([FlxKey.S])) pressed = 's';
+		else if (FlxG.keys.anyJustPressed([FlxKey.P])) pressed = 'p';
+		else if (FlxG.keys.anyJustPressed([FlxKey.K])) pressed = 'k';
+		if (pressed == '') return;
+
+		if (pressed == 's') eggProgress = 1;
+		else if (pressed == 'p') eggProgress = (eggProgress == 1) ? 2 : 0;
+		else if (pressed == 'k')
+		{
+			if (eggProgress == 2) unlockEgg();
+			eggProgress = 0;
+		}
+	}
+
+	function unlockEgg()
+	{
+		if (ClientPrefs.data.easterEggUnlocked) return;
+		ClientPrefs.data.easterEggUnlocked = true;
+		ClientPrefs.data.easterEggSound = true;
+		ClientPrefs.saveSettings();
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		showEggHint();
+	}
+
+	function showEggHint()
+	{
+		if (eggHintText == null)
+		{
+			eggHintText = new FlxText(0, FlxG.height - 64, FlxG.width,
+				Language.getPhrase('credits_easter_egg', 'Easter egg sound unlocked! Toggle it in Options → Audio.'), 18);
+			eggHintText.setFormat(Paths.font('editor_font.ttf'), 18, ui.ModernTheme.ACCENT, CENTER);
+			eggHintText.scrollFactor.set();
+			add(eggHintText);
+		}
+		eggHintText.visible = true;
+	}
 }

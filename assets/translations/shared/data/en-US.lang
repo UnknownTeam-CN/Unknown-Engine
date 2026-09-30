@@ -65,7 +65,15 @@ musicplayer_paused: "PLAYING: {1} (PAUSED)"
 musicplayer_tip: "Press SPACE to Pause / Press ESCAPE to Exit / Press R to Reset the Song"
 
 // Options
+options_experimental: "Experimental Options"
+setting_audio_support_extend: "Audio Support Extend"
+description_audio_support_extend: "Allows loading audio files in formats other than OGG (MP3, WAV, FLAC). May not work on all platforms."
+
 setting_scroll_type: "Scroll Type"
+options_audio: "Audio"
+credits_easter_egg: "Easter egg sound unlocked! Toggle it in Options → Audio."
+setting_easter_egg_sound: "Easter Egg Sound"
+description_easter_egg_sound: "Replaces some menu/SFX sounds with the hidden egg sounds. Unlocked via a secret code in Credits."
 setting_scroll_speed: "Scroll Speed"
 setting_playback_rate: "Playback Rate"
 setting_health_gain_multiplier: "Health Gain Multiplier"
@@ -221,6 +229,7 @@ options_graphics: "Graphics"
 options_visuals: "Visuals"
 options_gameplay: "Gameplay"
 options_language: "Language"
+language_select_title: "Language"
 
 reset_achievement: "Reset Achievement:"
 

@@ -15,7 +15,7 @@ import ui.InputMode;
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4';
-	public static var UnknownEngineVersion:String = '1.0.4 Release';
+	public static var UnknownEngineVersion:String = '1.0.6';
 	public static var curSelected:Int = 0;
 
 	var menuItems:Array<String> = [
@@ -44,8 +44,6 @@ class MainMenuState extends MusicBeatState
 	var captionTxt:FlxText;
 	var titleTxt:FlxText;
 	var selectionBar:FlxSprite;
-	var hintTxt:FlxText;
-	var lastInputMode:String = 'keyboard';
 
 	static var showOutdatedWarning:Bool = true;
 
@@ -92,7 +90,7 @@ class MainMenuState extends MusicBeatState
 		add(captionTxt);
 
 		titleTxt = new FlxText(62, 92, 0, Language.getPhrase('mainmenu_engine_title', "Unknown Meaning Funkin'"), 48);
-		titleTxt.setFormat(Paths.font(ModernTheme.FONT), 48, ModernTheme.TEXT_HI, LEFT);
+		titleTxt.setFormat(Paths.font("game_font.ttf"), 48, ModernTheme.TEXT_HI, LEFT);
 		titleTxt.scrollFactor.set();
 		titleTxt.antialiasing = true;
 		add(titleTxt);
@@ -105,7 +103,7 @@ class MainMenuState extends MusicBeatState
 		for (i in 0...menuItems.length)
 		{
 			var text = new FlxText(colX, startY + i * spacing, 0, Language.getPhrase('menu_${menuKeys[i]}', menuItems[i]), 38);
-			text.setFormat(Paths.font(ModernTheme.FONT), 38, ModernTheme.TEXT_MID, LEFT);
+			text.setFormat(Paths.font("game_font.ttf"), 38, ModernTheme.TEXT_MID, LEFT);
 			text.antialiasing = ClientPrefs.data.antialiasing;
 			text.scrollFactor.set();
 			add(text);
@@ -116,13 +114,6 @@ class MainMenuState extends MusicBeatState
 		selectionBar.scrollFactor.set();
 		selectionBar.antialiasing = true;
 		add(selectionBar);
-
-		// --- Device-aware hint bar (switches between keyboard & gamepad prompts) ---
-		hintTxt = new FlxText(0, FlxG.height - 42, FlxG.width, '', 16);
-		hintTxt.setFormat(Paths.font(ModernTheme.FONT_MONO), 16, ModernTheme.TEXT_DIM, CENTER);
-		hintTxt.scrollFactor.set();
-		add(hintTxt);
-		refreshInputHint();
 
 		// --- Version chip (bottom-left, glass, camera-fixed) ---
 		var verChip:ModernPanel = new ModernPanel(18, FlxG.height - 96, 330, 78);
@@ -169,26 +160,12 @@ class MainMenuState extends MusicBeatState
 	var selectedSomethin:Bool = false;
 	var timeNotMoving:Float = 0;
 
-	function refreshInputHint()
-	{
-		if (hintTxt == null) return;
-		var upDown:String = InputMode.actionLabel('ui_up') + '/' + InputMode.actionLabel('ui_down');
-		var acc:String = InputMode.actionLabel('accept');
-		var back:String = InputMode.actionLabel('back');
-		hintTxt.text = '$upDown 选择    $acc 确认    $back 返回';
-	}
-
 	override function update(elapsed:Float)
 	{
 		if (FlxG.sound.music.volume < 0.8)
 			FlxG.sound.music.volume = Math.min(FlxG.sound.music.volume + 0.5 * elapsed, 0.8);
 
 		InputMode.update();
-		if (InputMode.mode() != lastInputMode)
-		{
-			lastInputMode = InputMode.mode();
-			refreshInputHint();
-		}
 
 		if (!selectedSomethin)
 		{

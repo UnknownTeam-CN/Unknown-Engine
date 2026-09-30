@@ -2043,10 +2043,10 @@ class PlayState extends MusicBeatState
 						var i:Int = 0;
 						while(i < notes.length)
 						{
-							var daNote:Note = notes.members[i];
-							if(daNote == null) continue;
+						var daNote:Note = notes.members[i];
+						if(daNote == null) continue;
 
-							var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
+						var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
 							if(!daNote.mustPress) strumGroup = opponentStrums;
 
 							var strum:StrumNote = strumGroup.members[daNote.noteData];

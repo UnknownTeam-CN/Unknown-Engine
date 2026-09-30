@@ -25,3 +25,7 @@ vs_Community.exe
 !.vscode/extensions.json
 art/build_html.bat
 art/build_html-debug.bat
+
+### WorkBuddy / Local backups (本地工具目录与备份文件，不提交)
+.workbuddy/
+*.backup*

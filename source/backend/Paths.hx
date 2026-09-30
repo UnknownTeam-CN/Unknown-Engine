@@ -28,6 +28,8 @@ class Paths
 {
 	inline public static var SOUND_EXT = #if web "mp3" #else "ogg" #end;
 	public static var SOUND_EXTS:Array<String> = #if web ['mp3', 'ogg', 'wav'] #else ['ogg', 'mp3', 'wav', 'flac'] #end;
+	// 仅 OGG 的基础格式列表（未开启音频扩展时使用）
+	public static var SOUND_EXTS_BASIC:Array<String> = ['ogg'];
 	inline public static var VIDEO_EXT = "mp4";
 
 	public static function excludeAsset(key:String) {
@@ -423,11 +425,17 @@ class Paths
 
 	public static var currentTrackedSounds:Map<String, Sound> = [];
 
+	// 根据设置返回当前启用的音频扩展名列表；开启音频扩展后支持 OGG 以外的格式
+	public static function getSoundExts():Array<String>
+	{
+		return ClientPrefs.data.audioSupportExtend ? SOUND_EXTS : SOUND_EXTS_BASIC;
+	}
+
 	// 尝试所有支持的音频格式，返回第一个存在的文件路径
 	public static function resolveSoundFile(key:String, ?path:String, ?modsAllowed:Bool = true):String
 	{
 		var translatedKey:String = Language.getFileTranslation(key);
-		for (ext in SOUND_EXTS)
+		for (ext in getSoundExts())
 		{
 			var file:String = getPath(translatedKey + '.' + ext, SOUND, path, modsAllowed);
 			#if sys
@@ -445,7 +453,7 @@ class Paths
 	// 检查任意支持的音频格式是否存在（用于 LoadingState 等处的预加载验证）
 	public static function soundFileExists(key:String, ?parentFolder:String = null):Bool
 	{
-		for (ext in SOUND_EXTS)
+		for (ext in getSoundExts())
 		{
 			if (fileExists(key + '.' + ext, SOUND, false, parentFolder))
 				return true;
@@ -455,6 +463,49 @@ class Paths
 
 	public static function returnSound(key:String, ?path:String, ?modsAllowed:Bool = true, ?beepOnNull:Bool = true)
 	{
+		// ---- 彩蛋音效替换：仅对普通 sound（sounds/ 前缀）生效，直接加载 egg 目录的 .mp3，绕过扩展名白名单 ----
+		if (ClientPrefs.data.easterEggSound && key.indexOf('sounds/') == 0)
+		{
+			var baseName:String = key.substring('sounds/'.length);
+			var eggFile:String = getPath('sounds/egg/' + baseName + '.mp3', SOUND, path, modsAllowed);
+			#if sys
+			var eggExists:Bool = FileSystem.exists(eggFile);
+			#else
+			var eggExists:Bool = OpenFlAssets.exists(eggFile, SOUND);
+			#end
+			if (eggExists)
+			{
+				if (!currentTrackedSounds.exists(eggFile))
+				{
+					var eggSound:Sound = null;
+					// 原生端用 hxdr_libs 解码 MP3（Lime 默认不带 MP3 解码器），再包成 Sound
+					#if (sys && hxdr_libs)
+					try
+					{
+						var eggBuffer:lime.media.AudioBuffer = hxdr_libs.Mp3.fromFile(eggFile);
+						if (eggBuffer != null && eggBuffer.data != null)
+							eggSound = Sound.fromAudioBuffer(eggBuffer);
+					}
+					catch (eggErr:Dynamic)
+					{
+						trace('EGG MP3 decode failed, fallback to default: $eggFile ($eggErr)');
+					}
+					#end
+					if (eggSound == null)
+					{
+						#if sys
+						eggSound = Sound.fromFile(eggFile);
+						#else
+						eggSound = OpenFlAssets.getSound(eggFile);
+						#end
+					}
+					currentTrackedSounds.set(eggFile, eggSound);
+				}
+				localTrackedAssets.push(eggFile);
+				return currentTrackedSounds.get(eggFile);
+			}
+		}
+
 		var file:String = resolveSoundFile(key, path, modsAllowed);
 
 		//trace('precaching sound: $file');

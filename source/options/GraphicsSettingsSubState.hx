@@ -54,10 +54,17 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
 		option.minValue = 60;
-		option.maxValue = 240;
+		option.maxValue = 1000;
 		option.defaultValue = Std.int(FlxMath.bound(refreshRate, option.minValue, option.maxValue));
 		option.displayFormat = '%v FPS';
 		option.onChange = onChangeFramerate;
+
+		var option:Option = new Option('V-Sync',
+			'If checked, enables vertical synchronization.\nDisable for uncapped framerate (may cause screen tearing).',
+			'vsync',
+			BOOL);
+		option.onChange = onChangeVSync;
+		addOption(option);
 		#end
 
 		super();
@@ -77,16 +84,12 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 	function onChangeFramerate()
 	{
-		if(ClientPrefs.data.framerate > FlxG.drawFramerate)
-		{
-			FlxG.updateFramerate = ClientPrefs.data.framerate;
-			FlxG.drawFramerate = ClientPrefs.data.framerate;
-		}
-		else
-		{
-			FlxG.drawFramerate = ClientPrefs.data.framerate;
-			FlxG.updateFramerate = ClientPrefs.data.framerate;
-		}
+		ClientPrefs.applyVsync();
+	}
+
+	function onChangeVSync()
+	{
+		ClientPrefs.applyVsync();
 	}
 
 	override function changeSelection(change:Int = 0)

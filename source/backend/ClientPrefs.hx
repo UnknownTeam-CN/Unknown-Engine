@@ -23,8 +23,12 @@ import states.TitleState;
 	public var splashAlpha:Float = 0.6;
 	public var lowQuality:Bool = false;
 	public var shaders:Bool = true;
-	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
+	public var cacheOnGPU:Bool = #if (switch || html5) false #else true #end; // GPU Caching made by Raltyro (桌面端默认开启，减少运行时纹理上传卡顿)
 	public var framerate:Int = 60;
+	public var vsync:Bool = false;
+	public var audioSupportExtend:Bool = false; // 实验性：启用非 OGG 音频格式（MP3/WAV/FLAC 等）支持
+	public var easterEggUnlocked:Bool = false; // 彩蛋：是否在 Credits 输入秘籍解锁
+	public var easterEggSound:Bool = false;    // 彩蛋：使用 egg 文件夹音效替换部分 sound
 	public var camZooms:Bool = true;
 	public var hideHud:Bool = false;
 	public var noteOffset:Int = 0;
@@ -194,20 +198,11 @@ class ClientPrefs {
 
 		if(FlxG.save.data.framerate == null) {
 			final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
-			data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 240));
+			data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 1000));
 		}
 		#end
 
-		if(data.framerate > FlxG.drawFramerate)
-		{
-			FlxG.updateFramerate = data.framerate;
-			FlxG.drawFramerate = data.framerate;
-		}
-		else
-		{
-			FlxG.drawFramerate = data.framerate;
-			FlxG.updateFramerate = data.framerate;
-		}
+		applyVsync();
 
 		if(FlxG.save.data.gameplaySettings != null)
 		{
@@ -243,6 +238,21 @@ class ClientPrefs {
 			}
 			reloadVolumeKeys();
 		}
+	}
+
+	public static function applyVsync()
+	{
+		var targetFps:Int = data.framerate;
+		#if (!html5 && !switch)
+		if (data.vsync)
+		{
+			final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
+			targetFps = Std.int(refreshRate);
+			if (targetFps < 60) targetFps = data.framerate; // 刷新率异常时回退到用户设定
+		}
+		#end
+		FlxG.updateFramerate = targetFps;
+		FlxG.drawFramerate = targetFps;
 	}
 
 	inline public static function getGameplaySetting(name:String, defaultValue:Dynamic = null, ?customDefaultValue:Bool = false):Dynamic

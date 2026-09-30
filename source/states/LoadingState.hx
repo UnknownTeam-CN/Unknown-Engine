@@ -5,6 +5,7 @@ import sys.thread.FixedThreadPool;
 import haxe.Json;
 import lime.utils.Assets;
 import openfl.display.BitmapData;
+import openfl.display.Shape;
 import openfl.utils.AssetType;
 import openfl.utils.Assets as OpenFlAssets;
 import flixel.graphics.FlxGraphic;
@@ -66,6 +67,8 @@ class LoadingState extends MusicBeatState
 	var barWidth:Int = 0;
 	var intendedPercent:Float = 0;
 	var curPercent:Float = 0;
+	var ring:FlxSprite;
+	var percentText:FlxText;
 	var stateChangeDelay:Float = 0;
 
 	#if PSYCH_WATERMARKS
@@ -93,17 +96,61 @@ class LoadingState extends MusicBeatState
 		barGroup = new FlxSpriteGroup();
 		add(barGroup);
 
+		// 兼容 mod 自定义 LoadingScreen.hx 的占位进度条（默认隐藏，不影响新界面）
 		var barBack:FlxSprite = new FlxSprite(0, 660).makeGraphic(1, 1, FlxColor.BLACK);
 		barBack.scale.set(FlxG.width - 300, 25);
 		barBack.updateHitbox();
 		barBack.screenCenter(X);
+		barBack.visible = false;
 		barGroup.add(barBack);
 
 		bar = new FlxSprite(barBack.x + 5, barBack.y + 5).makeGraphic(1, 1, FlxColor.WHITE);
 		bar.scale.set(0, 15);
 		bar.updateHitbox();
+		bar.visible = false;
 		barGroup.add(bar);
 		barWidth = Std.int(barBack.width - 10);
+
+		// 灰色背景
+		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, 0xFF808080);
+		bg.scale.set(FlxG.width, FlxG.height);
+		bg.updateHitbox();
+		bg.screenCenter();
+		addBehindBar(bg);
+
+		// 右下角旋转圆环 (spinner)
+		var ringSize:Int = 70;
+		var ringShape:Shape = new Shape();
+		var rg = ringShape.graphics;
+		rg.lineStyle(8, 0xFFFFFFFF, 1);
+		var cx:Float = ringSize / 2;
+		var cy:Float = ringSize / 2;
+		var rad:Float = ringSize / 2 - 8;
+		var segments:Int = 40;
+		for (i in 0...segments)
+		{
+			var a:Float = (Math.PI * 1.5) * (i / (segments - 1)); // 0° → 270° 弧
+			var px:Float = cx + Math.cos(a) * rad;
+			var py:Float = cy + Math.sin(a) * rad;
+			if (i == 0) rg.moveTo(px, py); else rg.lineTo(px, py);
+		}
+		var ringBmp:BitmapData = new BitmapData(ringSize, ringSize, true, 0x00000000);
+		ringBmp.draw(ringShape);
+		ring = new FlxSprite();
+		ring.pixels = ringBmp;
+		ring.updateHitbox();
+		ring.origin.set(ringSize / 2, ringSize / 2);
+		ring.x = FlxG.width - ringSize - 50;
+		ring.y = FlxG.height - ringSize - 50;
+		add(ring);
+
+		// 右下角加载百分比数值（圆环左侧）
+		percentText = new FlxText(0, 0, 120, '0%', 32);
+		percentText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
+		percentText.borderSize = 2;
+		percentText.y = ring.y + (ringSize - percentText.height) / 2;
+		percentText.x = ring.x - percentText.fieldWidth - 12;
+		add(percentText);
 
 		#if HSCRIPT_ALLOWED
 		if(Mods.currentModDirectory != null && Mods.currentModDirectory.trim().length > 0)
@@ -142,41 +189,7 @@ class LoadingState extends MusicBeatState
 		}
 		#end
 
-		#if PSYCH_WATERMARKS // PSYCH LOADING SCREEN
-		var bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		bg.setGraphicSize(Std.int(FlxG.width));
-		bg.color = 0xFFD16FFF;
-		bg.updateHitbox();
-		addBehindBar(bg);
-	
-		loadingText = new FlxText(520, 600, 400, Language.getPhrase('now_loading', 'Now Loading', ['...']), 32);
-		loadingText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
-		loadingText.borderSize = 2;
-		addBehindBar(loadingText);
-	
-		logo = new FlxSprite(0, 0).loadGraphic(Paths.image('loading_screen/icon'));
-		logo.antialiasing = ClientPrefs.data.antialiasing;
-		logo.scale.set(0.75, 0.75);
-		logo.updateHitbox();
-		logo.screenCenter();
-		logo.x -= 50;
-		logo.y -= 40;
-		addBehindBar(logo);
-
-		#else // BASE GAME LOADING SCREEN
-		var bg = new FlxSprite().makeGraphic(1, 1, 0xFFCAFF4D);
-		bg.scale.set(FlxG.width, FlxG.height);
-		bg.updateHitbox();
-		bg.screenCenter();
-		addBehindBar(bg);
-
-		funkay = new FlxSprite(0, 0).loadGraphic(Paths.image('funkay'));
-		funkay.antialiasing = ClientPrefs.data.antialiasing;
-		funkay.setGraphicSize(0, FlxG.height);
-		funkay.updateHitbox();
-		addBehindBar(funkay);
-		#end
+		// 灰色背景、右下角旋转圆环与百分比数值已在上方统一创建，无需此处额外背景/图标
 		super.create();
 
 		if (stateChangeDelay <= 0 && checkLoaded())
@@ -212,14 +225,16 @@ class LoadingState extends MusicBeatState
 			intendedPercent = loaded / loadMax;
 		}
 
+		// 圆环持续旋转
+		ring.angle += elapsed * 360;
+
+		// 百分比数值（带缓动跟随）
 		if (curPercent != intendedPercent)
 		{
 			if (Math.abs(curPercent - intendedPercent) < 0.001) curPercent = intendedPercent;
 			else curPercent = FlxMath.lerp(intendedPercent, curPercent, Math.exp(-elapsed * 15));
-
-			bar.scale.x = barWidth * curPercent;
-			bar.updateHitbox();
 		}
+		percentText.text = '${Math.floor(curPercent * 100)}%';
 		
 		#if HSCRIPT_ALLOWED
 		if(hscript != null)
@@ -229,21 +244,7 @@ class LoadingState extends MusicBeatState
 		}
 		#end
 
-		#if PSYCH_WATERMARKS // PSYCH LOADING SCREEN
-		timePassed += elapsed;
-		shakeFl += elapsed * 3000;
-		var dots:String = '';
-		switch(Math.floor(timePassed % 1 * 3))
-		{
-			case 0:
-				dots = '.';
-			case 1:
-				dots = '..';
-			case 2:
-				dots = '...';
-		}
-		#end
-		loadingText.text = Language.getPhrase('now_loading', 'Now Loading{1}', [dots]);
+		// 加载百分比与圆环已在上方更新
 	}
 
 	#if HSCRIPT_ALLOWED

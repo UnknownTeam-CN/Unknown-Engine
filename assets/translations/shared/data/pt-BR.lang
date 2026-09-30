@@ -108,6 +108,10 @@ achievement_pessy_easter_egg: "Garota de Programação"
 description_pessy_easter_egg: "Hihi, você me encontrou~!"
 
 // Options
+options_experimental: "Opções Experimentais"
+setting_audio_support_extend: "Extensão de Suporte de Áudio"
+description_audio_support_extend: "Permite carregar áudio em formatos além de OGG (MP3, WAV, FLAC, etc.). Pode não funcionar em todas as plataformas."
+
 options_note_colors: "Coloração das Notas"
 options_controls: "Controles"
 options_adjust_delay_and_combo: "Ajustar Atraso e Combo"
@@ -115,6 +119,7 @@ options_gameplay: "Jogabilidade"
 options_visuals: "Visuais"
 options_graphics: "Gráficos"
 options_language: "Idioma"
+language_select_title: "Idioma"
 
 graphics_menu: "Configurações de Gráficos"
 visuals_menu: "Opções Visuais"
@@ -166,6 +171,10 @@ reset_to_default_keys: "Resetar para o Padrão"
 
 // Gameplay Changers
 setting_scroll_type: "Tipo de Scroll"
+options_audio: "Áudio"
+credits_easter_egg: "Som de easter egg desbloqueado! Ative em Opções → Áudio."
+setting_easter_egg_sound: "Som de Easter Egg"
+description_easter_egg_sound: "Substitui alguns sons de menu/SFX pelos sons de easter egg ocultos. Desbloqueado via código secreto em Créditos."
 setting_scroll_type-multiplicative: "Multiplicativo"
 setting_scroll_type-constant: "Constante"
 setting_scroll_speed: "Velocidade de Scroll"
