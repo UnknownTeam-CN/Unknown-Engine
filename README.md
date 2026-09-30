@@ -21,8 +21,9 @@ For this you can head over to [the wiki](https://shadowmario.github.io/psychengi
 
 There you can learn how to use the 212 PlayState funcions in your mod!
 ## Contributing
-To contribute this project, you can do it by yourself or with a team, it will affect the way you will be added into credit list
-As for credit, if you fixed a huuuuuge bug, or added a necessary function or other new things...anyway, I'll decide how you will be added into README or both README and game credit list
+* To contribute this project, you can do it by yourself or with a team, it will affect the way you will be added into credit list
+* As for credit, if you fixed a huuuuuge bug, or added a necessary function or other new things...anyway, I'll decide how you will be added into README or both README and game credit list
+* If you are with a team, and all works are made by you and ur team, your team name will be added into contri-teams section, ah by the way, the icon must be prepared by uself and must be 150x150px
 
 ## Credits:
 ### UE Dev
