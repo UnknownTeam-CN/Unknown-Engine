@@ -15,7 +15,7 @@ import ui.InputMode;
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4';
-	public static var UnknownEngineVersion:String = '1.0.6';
+	public static var UnknownEngineVersion:String = '1.0.6.1';
 	public static var curSelected:Int = 0;
 
 	var menuItems:Array<String> = [
