@@ -182,7 +182,18 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		['Lyric - Set Text', "Display lyrics on screen with fade in/out animation (alternate position).\nValue 1: Text to show (leave empty to hide/dismiss current lyrics)\nCreated by Avis."],
 
-		['Lyric - Set Color', "Change text color for Lyric - Set Text.\nValue 1: Hex color (e.g. ff0000 = red). Leave empty for white.\nCreated by Avis."]
+		['Lyric - Set Color', "Change text color for Lyric - Set Text.\nValue 1: Hex color (e.g. ff0000 = red). Leave empty for white.\nCreated by Avis."],
+
+		['Fever Enabled', "Enables or disables the Fever system.\nValue 1: true / false\nTurning it off clears every condition, resets Fever Ready and cancels an active Fever."],
+
+		['Fever Mode', "Adds a Fever condition, can be used several times to stack them.\nValue 1: misses / accuracy / combo\nValue 2: threshold number\nmisses = total misses <= value, accuracy = rating% >= value, combo = combo >= value\nUsing the same Value 1 twice overwrites its threshold."],
+
+		['Fever Check', "Starts checking the Fever Mode conditions every frame.\nOnce satisfied it locks into Fever Ready, after that the stats no longer affect it.\nValue 1: all (default, every condition) / any (any single condition)"],
+
+		['Fever Launch', "Starts or stops the Fever.\nValue 1: on / off\n'on' requires Fever Ready.\n'off' only stops it, Fever Ready is kept so you can launch again right away."],
+
+		['Change Stage', "Swaps the stage mid-song.\nValue 1: stage name - a stages/NAME.json, a stages/NAME.lua that draws it, and/or a stage class if it has code\nValue 2: options, comma separated\n  nofade = swap instantly without the black fade\n  keep = don't move the characters / don't take the new stage's zoom and camera offsets\n  reload = throw the cached copy away and rebuild it\nStages stay cached, so switching back to one is instant."],
+		['Play Video', "Plays a video while the song keeps running.\nValue 1: video name - from mods/videos/ first, then assets/videos/ (the .mp4 is added for you)\nValue 2: behind = draw it over the stage but under the HUD (default)\n  front = draw it over everything, HUD included, like a cutscene\nOnly one video runs at a time - starting a new one ends the old one."]
 
 	];
 

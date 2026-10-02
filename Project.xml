@@ -37,7 +37,7 @@
 	<define name="MULTITHREADED_LOADING" /> <!-- UNCOMMENTING THIS LINE WILL ENABLE MULTITHREADED LOADING, WHICH IMPROVES LOADING TIMES, BUT APPARENTLY CAN FREEZE THE GAME ON SONG LOAD IN OLDER PCs? -->
 	<define name="SHOW_LOADING_SCREEN" />
 	<define name="PSYCH_WATERMARKS"/> <!-- DELETE THIS TO REMOVE THE PSYCH LOGO FROM LOADING SCREEN -->
-	<define name="VIDEOS_ALLOWED" if="desktop" />
+	<define name="VIDEOS_ALLOWED" if="desktop || mobile" />
 
 	<!-- <section if="officialBuild">
 		<define name="BASE_GAME_FILES" /> This is a option for containing original game files or not 
@@ -82,10 +82,10 @@
 	<assets path="assets/embed"         exclude="*.ogg" if="web" embed="true"/>
 	<assets path="assets/embed"         exclude="*.mp3" unless="web" embed="true"/>
 	<assets path="assets/videos"        if="VIDEOS_ALLOWED"/>
-	<assets path="assets/songs"         exclude="*.ogg" if="web"/>
-	<assets path="assets/songs"         exclude="*.mp3" unless="web"/>
-	<assets path="assets/week_assets"   rename="assets" exclude="*.ogg" if="web"/>
-	<assets path="assets/week_assets"   rename="assets" exclude="*.mp3" unless="web"/>
+	<!-- 桌面端不再排除 mp3/wav：hxdr_libs 负责 MP3 解码，但只能读磁盘上的文件，
+	     所以这些音频必须作为独立文件复制到输出目录（embed="false"），不能被打包进去 -->
+	<assets path="assets/songs"         exclude="*.ogg" if="web" embed="false"/>
+	<assets path="assets/week_assets"   rename="assets" exclude="*.ogg" if="web" embed="false"/>
 
 	<section if="TRANSLATIONS_ALLOWED">
 		<assets path="assets/translations" rename="assets" exclude="*.ogg" if="web"/>

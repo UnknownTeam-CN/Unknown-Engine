@@ -166,5 +166,59 @@ class VideoSprite extends FlxSpriteGroup {
 	public function play() videoSprite?.play();
 	public function resume() videoSprite?.resume();
 	public function pause() videoSprite?.pause();
+
+	/**
+	 * Set while `prepare()` is holding the video ready - it is loaded but has not been cued yet.
+	 */
+	public var preloaded:Bool = false;
+
+	/**
+	 * Opens the video, decodes its first frame and freezes it there, silent and invisible, so that
+	 * `startPrepared()` can begin it on that very frame instead of spending time loading on cue.
+	 */
+	public function prepare():Void
+	{
+		if (preloaded || videoSprite == null || videoSprite.bitmap == null)
+			return;
+
+		preloaded = true;
+
+		visible = false;
+		videoSprite.volumeAdjust = 0; // nothing should be heard while it is only warming up
+
+		// calling pause() right after play() is unreliable because libvlc may not have started yet;
+		// by the time it reports "playing" the first frame is already decoded, so freeze it there.
+		// That signal arrives a frame late though, so rewind - otherwise the video would start a
+		// bit into itself on its cue
+		var holdFirstFrame:Void->Void = null;
+		holdFirstFrame = function():Void
+		{
+			videoSprite.bitmap.onPlaying.remove(holdFirstFrame);
+			videoSprite.pause();
+			videoSprite.bitmap.time = 0;
+		};
+		videoSprite.bitmap.onPlaying.add(holdFirstFrame);
+		videoSprite.play();
+	}
+
+	/**
+	 * Reveals and starts a video that `prepare()` already warmed up.
+	 */
+	public function startPrepared():Void
+	{
+		if (!preloaded)
+		{
+			play();
+			return;
+		}
+
+		preloaded = false;
+		visible = true;
+		videoSprite.volumeAdjust = 1;
+
+		// if libvlc got to run before it could be frozen, start over from the beginning
+		videoSprite.bitmap.time = 0;
+		videoSprite.resume();
+	}
 	#end
 }

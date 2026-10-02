@@ -511,13 +511,9 @@ class Paths
 		//trace('precaching sound: $file');
 		if(!currentTrackedSounds.exists(file))
 		{
-			#if sys
-			if(FileSystem.exists(file))
-				currentTrackedSounds.set(file, Sound.fromFile(file));
-			#else
-			if(OpenFlAssets.exists(file, SOUND))
-				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));
-			#end
+			var sound:Null<Sound> = loadSoundFile(file);
+			if (sound != null)
+				currentTrackedSounds.set(file, sound);
 			else if(beepOnNull)
 			{
 				trace('SOUND NOT FOUND: $key, PATH: $path');
@@ -527,6 +523,41 @@ class Paths
 		}
 		localTrackedAssets.push(file);
 		return currentTrackedSounds.get(file);
+	}
+
+	/**
+	 * Reads an audio file into a Sound. Lime ships no MP3 decoder on native targets, so MP3 has to
+	 * go through hxdr_libs first - otherwise turning on "Audio Support Extend" finds the file and
+	 * then fails to decode it, which looks exactly like "it only reads OGG".
+	 * @return the Sound, or null when the file is missing or no decoder can handle it.
+	 */
+	static function loadSoundFile(file:String):Null<Sound>
+	{
+		#if (sys && hxdr_libs)
+		if (file.toLowerCase().endsWith('.mp3') && FileSystem.exists(file))
+		{
+			try
+			{
+				var buffer:lime.media.AudioBuffer = hxdr_libs.Mp3.fromFile(file);
+				if (buffer != null && buffer.data != null)
+					return Sound.fromAudioBuffer(buffer);
+				trace('MP3 decode gave back nothing: $file');
+			}
+			catch (e:Dynamic)
+			{
+				trace('MP3 decode failed, falling back: $file ($e)');
+			}
+		}
+		#end
+
+		#if sys
+		if (FileSystem.exists(file))
+			return Sound.fromFile(file);
+		#else
+		if (OpenFlAssets.exists(file, SOUND))
+			return OpenFlAssets.getSound(file);
+		#end
+		return null;
 	}
 
 	#if MODS_ALLOWED

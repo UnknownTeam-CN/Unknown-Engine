@@ -148,6 +148,30 @@ class PlayState extends MusicBeatState
 	public var boyfriendGroup:FlxSpriteGroup;
 	public var dadGroup:FlxSpriteGroup;
 	public var gfGroup:FlxSpriteGroup;
+
+	// Change Stage event: runtime stage swapping.
+	/** Name of the stage currently on screen (may differ from SONG.stage after a swap). */
+	public var currentStageName:String = '';
+	/** Stages already built, keyed by name, kept alive so switching back is instant. */
+	var stageCache:Map<String, Array<BaseStage>> = [];
+	/** JSON stage sprites per stage name, shown/hidden together with the stage that owns them. */
+	var stageObjects:Map<String, Array<FlxSprite>> = [];
+	/** Full black overlay that covers the game view while two stages are swapped. */
+	var stageFader:FlxSprite = null;
+	/** On-screen readout for stage swap problems, plus where the last stage file came from. */
+	var stageNotice:FlxText = null;
+	var stageNoticeTime:Float = 0;
+	var lastStageFilePath:String = '';
+	/** Scripts each stage started (stages/<name>.lua / .hx), so a thrown away stage stops its own scripts. */
+	var stageScripts:Map<String, Array<Dynamic>> = [];
+	/** Members that existed from the very first frame - anything newer belongs to some stage. */
+	var baselineMembers:Array<FlxBasic> = null;
+	var stageScanTimer:Float = 0.5;
+	/** [defaultCamZoom, cameraSpeed, BF_X, BF_Y, GF_X, GF_Y, DAD_X, DAD_Y] each stage settled on. */
+	var stageCam:Map<String, Array<Float>> = [];
+	/** Seconds each fade direction takes during a stage swap. */
+	static inline var STAGE_FADE_TIME:Float = 0.35;
+
 	public static var curStage:String = '';
 	public static var stageUI(default, set):String = "normal";
 	public static var uiPrefix:String = "";
@@ -257,6 +281,16 @@ class PlayState extends MusicBeatState
 	public var songScore:Int = 0;
 	public var songHits:Int = 0;
 	public var songMisses:Int = 0;
+
+	// Fever event system
+	public var feverEnabled:Bool = false;
+	public var feverConditions:Array<Dynamic> = []; // {type:'misses'|'accuracy'|'combo', value:Float}
+	public var feverChecking:Bool = false;
+	public var feverMode:String = 'all'; // 'all' or 'any'
+	public var feverReady:Bool = false;  // latched: once true it is no longer affected by the Fever Mode values
+	public var feverActive:Bool = false;
+	public var feverVisualizer:FeverVisualizer = null;
+
 	// Replay
 	public var saveNotes:Array<Array<Dynamic>> = [];
 	public var saveJudges:Array<String> = [];
@@ -558,20 +592,9 @@ class PlayState extends MusicBeatState
 		dadGroup = new FlxSpriteGroup(DAD_X, DAD_Y);
 		gfGroup = new FlxSpriteGroup(GF_X, GF_Y);
 
-		switch (curStage)
-		{
-			case 'stage': new StageWeek1(); 			//Week 1
-			case 'spooky': new Spooky();				//Week 2
-			case 'philly': new Philly();				//Week 3
-			case 'limo': new Limo();					//Week 4
-			case 'mall': new Mall();					//Week 5 - Cocoa, Eggnog
-			case 'mallEvil': new MallEvil();			//Week 5 - Winter Horrorland
-			case 'school': new School();				//Week 6 - Senpai, Roses
-			case 'schoolEvil': new SchoolEvil();		//Week 6 - Thorns
-			case 'tank': new Tank();					//Week 7 - Ugh, Guns, Stress
-			case 'phillyStreets': new PhillyStreets(); 	//Weekend 1 - Darnell, Lit Up, 2Hot
-			case 'phillyBlazin': new PhillyBlazin();	//Weekend 1 - Blazin
-		}
+		spawnStageClass(curStage);
+		registerStageInstances(curStage, stages.copy());
+		currentStageName = curStage;
 		if(isPixelStage) introSoundsSuffix = '-pixel';
 
 		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
@@ -598,12 +621,7 @@ class PlayState extends MusicBeatState
 		boyfriendGroup.add(boyfriend);
 		
 		if(stageData.objects != null && stageData.objects.length > 0)
-		{
-			var list:Map<String, FlxSprite> = StageData.addObjectsToState(stageData.objects, !stageData.hide_girlfriend ? gfGroup : null, dadGroup, boyfriendGroup, this);
-			for (key => spr in list)
-				if(!StageData.reservedNames.contains(key))
-					variables.set(key, spr);
-		}
+			addStageObjectsFromJson(curStage, stageData, true);
 		else
 		{
 			add(gfGroup);
@@ -643,8 +661,11 @@ class PlayState extends MusicBeatState
 		
 		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
 		// STAGE SCRIPTS
-		#if LUA_ALLOWED startLuasNamed('stages/' + curStage + '.lua'); #end
-		#if HSCRIPT_ALLOWED startHScriptsNamed('stages/' + curStage + '.hx'); #end
+		var preStageScriptMembers:Array<FlxBasic> = members.copy();
+		startStageScripts(curStage);
+		// whatever the stage script drew belongs to the starting stage too, otherwise a swap away
+		// from it would leave those sprites sitting on screen
+		collectStageObjects(curStage, preStageScriptMembers);
 
 		// CHARACTER SCRIPTS
 		if(gf != null) startCharacterScripts(gf.curCharacter);
@@ -812,6 +833,13 @@ class PlayState extends MusicBeatState
 
 		stagesFunc(function(stage:BaseStage) stage.createPost());
 		callOnScripts('onCreatePost');
+
+		feverVisualizer = new FeverVisualizer();
+		feverVisualizer.cameras = [camHUD];
+		add(feverVisualizer);
+		setOnScripts('feverEnabled', feverEnabled);
+		setOnScripts('feverReady', feverReady);
+		setOnScripts('feverActive', feverActive);
 		
 		var splash:NoteSplash = new NoteSplash();
 		grpNoteSplashes.add(splash);
@@ -1018,6 +1046,8 @@ class PlayState extends MusicBeatState
 	}
 
 	public var videoCutscene:VideoSprite = null;
+	/** Event videos opened during loading and held on their first frame, by file name. */
+	var preloadedVideos:Map<String, VideoSprite> = [];
 	public function startVideo(name:String, forMidSong:Bool = false, canSkip:Bool = true, loop:Bool = false, playOnLoad:Bool = true)
 	{
 		#if VIDEOS_ALLOWED
@@ -1082,6 +1112,129 @@ class PlayState extends MusicBeatState
 			endSong();
 		else
 			startCountdown();
+	}
+
+	/**
+	 * Plays a video while the song keeps running - the "Play Video" event.
+	 * @param name      File name in `mods/videos/` or `assets/videos/`; the `.mp4` is added for you.
+	 * @param behindHud true  = over the stage, but under the health bar / notes / combo (default)
+	 *                  false = over everything, HUD included, the way a cutscene video behaves
+	 */
+	public function playVideoEvent(name:String, behindHud:Bool = true):Void
+	{
+		#if VIDEOS_ALLOWED
+		var fileName:String = cleanVideoName(name);
+
+		// loading already opened this video and froze it on its first frame, so it starts right now
+		var ready:VideoSprite = preloadedVideos.get(fileName);
+		if (ready != null)
+		{
+			preloadedVideos.remove(fileName);
+			videoCutscene = ready;
+			ready.startPrepared();
+			return;
+		}
+
+		stopVideoEvent();
+
+		var video:VideoSprite = startVideo(fileName, true, false, false, true);
+		if (video == null) return;
+
+		// startVideo only wires an end callback for cutscene videos, so the reference would linger
+		video.finishCallback = function() { if (videoCutscene == video) videoCutscene = null; };
+		video.onSkip = video.finishCallback;
+
+		placeVideoEvent(video, behindHud);
+		#else
+		FlxG.log.error('Play Video: this build was compiled without video support');
+		#end
+	}
+
+	/**
+	 * Loads an event video while the song is still loading, and holds it on its first frame, so
+	 * that the event itself has nothing left to wait for.
+	 */
+	function preloadVideoEvent(name:String, behindHud:Bool):Void
+	{
+		#if VIDEOS_ALLOWED
+		var fileName:String = cleanVideoName(name);
+		if (fileName.length < 1 || preloadedVideos.exists(fileName)) return;
+
+		var video:VideoSprite = startVideo(fileName, true, false, false, false); // playOnLoad = false
+		if (video == null) return;
+
+		video.finishCallback = function() { if (videoCutscene == video) videoCutscene = null; };
+		video.onSkip = video.finishCallback;
+
+		placeVideoEvent(video, behindHud);
+		video.prepare();
+
+		preloadedVideos.set(fileName, video);
+		videoCutscene = null; // it is only waiting for its cue, so it is not the running video
+		#end
+	}
+
+	/** Videos are looked up without their extension, so "clip.mp4" and "clip" mean the same file. */
+	static function cleanVideoName(name:String):String
+	{
+		if (name == null) return '';
+		var fileName:String = name.trim();
+		if (fileName.toLowerCase().endsWith('.mp4'))
+			fileName = fileName.substr(0, fileName.length - 4); // Paths.video adds the extension
+		return fileName;
+	}
+
+	/**
+	 * Puts an event video where it belongs. startVideo appends it to the end of the members list,
+	 * which would draw it on top of the HUD.
+	 */
+	function placeVideoEvent(video:VideoSprite, behindHud:Bool):Void
+	{
+		remove(video, true);
+
+		if (!behindHud)
+		{
+			add(video); // VideoSprite already draws on the last camera, i.e. on top of everything
+			return;
+		}
+
+		// VideoSprite picks the last camera in its constructor, which draws over the HUD - move it
+		// to camHUD and in front of the stage, but behind the health bar and the notes
+		video.cameras = [camHUD];
+		if (video.cover != null) video.cover.cameras = [camHUD];
+		if (video.videoSprite != null) video.videoSprite.cameras = [camHUD];
+		if (video.skipSprite != null) video.skipSprite.cameras = [camHUD];
+
+		var at:Int = gameViewEndIndex();
+		if (at >= 0) insert(at, video); else add(video);
+	}
+
+	/** The game paused, so a video playing in the background has to pause with it. */
+	function pauseVideoEvent():Void
+	{
+		#if VIDEOS_ALLOWED
+		if (videoCutscene != null && !videoCutscene.preloaded) videoCutscene.pause();
+		#end
+	}
+
+	/** The game resumed, so a video paused along with it picks up where it stopped. */
+	function resumeVideoEvent():Void
+	{
+		#if VIDEOS_ALLOWED
+		if (videoCutscene != null && !videoCutscene.preloaded) videoCutscene.resume();
+		#end
+	}
+
+	/** Ends the video started by the "Play Video" event, if one is still running. */
+	public function stopVideoEvent():Void
+	{
+		#if VIDEOS_ALLOWED
+		if (videoCutscene == null) return;
+		videoCutscene.finishCallback = null;
+		videoCutscene.onSkip = null;
+		videoCutscene.destroy();
+		videoCutscene = null;
+		#end
 	}
 
 	var dialogueCount:Int = 0;
@@ -1690,6 +1843,10 @@ class PlayState extends MusicBeatState
 
 			case 'Play Sound':
 				Paths.sound(event.value1); //Precache sound
+
+			case 'Play Video':
+				// opening a video on cue costs time, so do it here and hold it on its first frame
+				preloadVideoEvent(event.value1, !(event.value2 != null && event.value2.toLowerCase().contains('front')));
 		}
 		stagesFunc(function(stage:BaseStage) stage.eventPushedUnique(event));
 	}
@@ -1800,6 +1957,7 @@ class PlayState extends MusicBeatState
 			FlxTimer.globalManager.forEach(function(tmr:FlxTimer) if(!tmr.finished) tmr.active = true);
 			FlxTween.globalManager.forEach(function(twn:FlxTween) if(!twn.finished) twn.active = true);
 
+			resumeVideoEvent();
 			paused = false;
 			// 暂停恢复后推入当前按键状态帧，消除暂停期间的录制间隙
 			if (!cpuControlled && !loadRep && !endingSong && replayInputFrames.length > 0)
@@ -1894,6 +2052,18 @@ class PlayState extends MusicBeatState
 			}
 		}
 		else FlxG.camera.followLerp = 0;
+
+		updateFever(elapsed);
+		updateStageNotice(elapsed);
+
+		// stage scripts love adding sprites mid-song (onBeatHit/onStepHit), so look for them now and then
+		stageScanTimer -= elapsed;
+		if (stageScanTimer <= 0)
+		{
+			stageScanTimer = 0.5;
+			if (baselineMembers == null) baselineMembers = members.copy();
+			else scanNewStageObjects();
+		}
 
 		// Note Jump: sync all strum scale/angle (and alpha after song start) from proxy each frame
 		if (noteJumpProxy != null)
@@ -2176,6 +2346,7 @@ class PlayState extends MusicBeatState
 			vocals.pause();
 			opponentVocals.pause();
 		}
+		pauseVideoEvent(); // the video runs on its own thread, so it has to be told about the pause
 		if(!cpuControlled)
 		{
 			for (note in playerStrums)
@@ -2793,10 +2964,881 @@ class PlayState extends MusicBeatState
 				#else
 				FlxG.log.warn('Shader event: Platform unsupported for Runtime Shaders!');
 				#end
+
+			case 'Fever Enabled':
+				var enable:Bool = (value1.toLowerCase().trim() == 'true' || value1 == '1');
+				setFeverEnabled(enable);
+
+			case 'Fever Mode':
+				addFeverCondition(value1, value2);
+
+			case 'Fever Check':
+				startFeverCheck(value1);
+
+			case 'Fever Launch':
+				var launchStr:String = value1.toLowerCase().trim();
+				if (launchStr == 'on' || launchStr == 'true' || launchStr == '1')
+					launchFever();
+				else
+					stopFever();
+
+			case 'Change Stage':
+				var targetStage:String = value1.trim();
+				var noFade:Bool = false;
+				var keepLayout:Bool = false;
+				var reloadStage:Bool = false;
+				var options:Array<String> = value2.toLowerCase().split(',');
+				for (opt in options)
+				{
+					switch (opt.trim())
+					{
+						case 'nofade': noFade = true;
+						case 'keep': keepLayout = true;
+						case 'reload': reloadStage = true;
+					}
+				}
+				changeStage(targetStage, !noFade, !keepLayout, reloadStage);
+
+			case 'Play Video':
+				var videoName:String = cleanVideoName(value1);
+				if (videoName.length > 0)
+					playVideoEvent(videoName, !(value2 != null && value2.toLowerCase().contains('front')));
+				else
+					FlxG.log.error('Play Video: Value 1 is empty, it needs the video name');
 		}
 
 		stagesFunc(function(stage:BaseStage) stage.eventCalled(eventName, value1, value2, flValue1, flValue2, strumTime));
 		callOnScripts('onEvent', [eventName, value1, value2, strumTime]);
+	}
+
+	// __________________________ Fever system __________________________
+
+	public function setFeverEnabled(enable:Bool):Void
+	{
+		feverEnabled = enable;
+		if (!enable)
+		{
+			feverConditions = [];
+			feverChecking = false;
+			feverReady = false;
+			feverMode = 'all';
+			if (feverActive) stopFever();
+		}
+		setOnScripts('feverEnabled', feverEnabled);
+		setOnScripts('feverReady', feverReady);
+	}
+
+	/**
+	 * Adds one Fever Mode condition. Can be called several times to stack conditions.
+	 * Value 1: 'misses' (songMisses <= value), 'accuracy' (rating% >= value), 'combo' (combo >= value)
+	 * Value 2: the threshold number
+	 */
+	public function addFeverCondition(type:String, value:String):Void
+	{
+		var kind:String = (type != null) ? type.toLowerCase().trim() : '';
+		if (kind != 'misses' && kind != 'accuracy' && kind != 'combo')
+		{
+			FlxG.log.warn('Fever Mode: unknown type "$kind", expected misses/accuracy/combo.');
+			return;
+		}
+
+		var num:Float = Std.parseFloat(value);
+		if (Math.isNaN(num))
+		{
+			FlxG.log.warn('Fever Mode: "$value" is not a valid number.');
+			return;
+		}
+
+		// Same type replaces the old threshold instead of stacking duplicates.
+		for (cond in feverConditions)
+		{
+			if (cond.type == kind)
+			{
+				cond.value = num;
+				return;
+			}
+		}
+		feverConditions.push({type: kind, value: num});
+	}
+
+	/** Value 1: 'all' (default) or 'any'. Keeps checking every frame until satisfied. */
+	public function startFeverCheck(mode:String):Void
+	{
+		if (!feverEnabled)
+		{
+			FlxG.log.warn('Fever Check: Fever is disabled, run "Fever Enabled" first.');
+			return;
+		}
+		if (feverConditions.length <= 0)
+		{
+			FlxG.log.warn('Fever Check: no conditions yet, run "Fever Mode" first.');
+			return;
+		}
+
+		feverMode = (mode != null && mode.toLowerCase().trim() == 'any') ? 'any' : 'all';
+		feverChecking = true;
+		evaluateFever(); // also evaluate right away
+	}
+
+	function updateFever(elapsed:Float):Void
+	{
+		if (feverVisualizer != null)
+			feverVisualizer.running = feverActive;
+
+		if (feverEnabled && feverChecking && !feverReady)
+			evaluateFever();
+	}
+
+	function evaluateFever():Void
+	{
+		if (feverConditions.length <= 0) return;
+
+		var satisfied:Int = 0;
+		for (cond in feverConditions)
+			if (checkFeverCondition(cond.type, cond.value)) satisfied++;
+
+		var passed:Bool = (feverMode == 'any') ? (satisfied > 0) : (satisfied >= feverConditions.length);
+		if (passed)
+		{
+			// Latch: from now on the Fever Mode values no longer affect the state.
+			feverReady = true;
+			feverChecking = false;
+			setOnScripts('feverReady', feverReady);
+			callOnScripts('onFeverReady');
+		}
+	}
+
+	function checkFeverCondition(type:String, value:Float):Bool
+	{
+		return switch (type)
+		{
+			case 'misses': (songMisses <= value);
+			case 'accuracy': (ratingPercent * 100 >= value);
+			case 'combo': (combo >= value);
+			default: false;
+		}
+	}
+
+	public function launchFever():Void
+	{
+		if (!feverReady)
+		{
+			FlxG.log.warn('Fever Launch: not ready yet, conditions are not met.');
+			return;
+		}
+		if (feverActive) return;
+
+		feverActive = true;
+		if (feverVisualizer != null)
+			feverVisualizer.bindMusic(); // music usually starts after the visualizer was created
+		setOnScripts('feverActive', feverActive);
+		callOnScripts('onFeverStart');
+	}
+
+	public function stopFever():Void
+	{
+		if (!feverActive) return;
+		feverActive = false;
+		// feverReady is kept on purpose: relaunching does not require meeting conditions again.
+		setOnScripts('feverActive', feverActive);
+		callOnScripts('onFeverEnd');
+	}
+
+	// _______________________ Change Stage system _______________________
+
+	/** Object types a stage JSON uses for the character groups themselves. */
+	static var CHARACTER_TYPES:Array<String> = ['gf', 'gfGroup', 'dad', 'dadGroup', 'boyfriend', 'boyfriendGroup'];
+
+	/**
+	 * Creates the BaseStage class bound to `name`. Everything it adds through BaseStage's own
+	 * helpers gets tracked as belonging to that stage, so hiding/showing/destroying works.
+	 * @return true when a stage class was actually instantiated.
+	 */
+	function spawnStageClass(name:String):Bool
+	{
+		switch (name)
+		{
+			case 'stage': new StageWeek1(); 			//Week 1
+			case 'spooky': new Spooky();				//Week 2
+			case 'philly': new Philly();				//Week 3
+			case 'limo': new Limo();					//Week 4
+			case 'mall': new Mall();					//Week 5 - Cocoa, Eggnog
+			case 'mallEvil': new MallEvil();			//Week 5 - Winter Horrorland
+			case 'school': new School();				//Week 6 - Senpai, Roses
+			case 'schoolEvil': new SchoolEvil();		//Week 6 - Thorns
+			case 'tank': new Tank();					//Week 7 - Ugh, Guns, Stress
+			case 'phillyStreets': new PhillyStreets(); 	//Weekend 1 - Darnell, Lit Up, 2Hot
+			case 'phillyBlazin': new PhillyBlazin();	//Weekend 1 - Blazin
+			default: return false;
+		}
+		return true;
+	}
+
+	/** Remembers the instances of a stage under its name so switching back doesn't rebuild anything. */
+	function registerStageInstances(name:String, built:Array<BaseStage>):Void
+	{
+		var list:Array<BaseStage> = stageCache.exists(name) ? stageCache.get(name) : [];
+		for (stage in built)
+			if (list.indexOf(stage) < 0) list.push(stage);
+		stageCache.set(name, list);
+
+		// whatever the layout ended up as once this stage was built - either read from its json or
+		// set by its stage class in create(). Code stages have no json, so this is the only way back.
+		stageCam.set(name, [defaultCamZoom, cameraSpeed, BF_X, BF_Y, GF_X, GF_Y, DAD_X, DAD_Y]);
+	}
+
+	/**
+	 * Builds the sprites listed in a stage JSON and keeps them under `name`.
+	 * @param initial true while `create()` runs: the character groups aren't in the state yet, so the
+	 *                reserved entries are used to layer them in, exactly like vanilla does.
+	 *                false at runtime: the characters already sit in `members`, so only the plain
+	 *                sprites get added - below the characters when the JSON lists them before them,
+	 *                above when it lists them after.
+	 */
+	function addStageObjectsFromJson(name:String, data:StageFile, initial:Bool):Int
+	{
+		if (data == null || data.objects == null || data.objects.length < 1) return 0;
+
+		var owned:Array<FlxSprite> = stageObjects.exists(name) ? stageObjects.get(name) : [];
+
+		if (initial)
+		{
+			var list:Map<String, FlxSprite> = StageData.addObjectsToState(data.objects, !data.hide_girlfriend ? gfGroup : null, dadGroup, boyfriendGroup, this);
+			for (key => spr in list)
+			{
+				if (StageData.reservedNames.contains(key)) continue; // those are the character groups themselves
+				owned.push(spr);
+				variables.set(key, spr);
+			}
+			stageObjects.set(name, owned);
+			return owned.length;
+		}
+
+		// Names of the sprites the file lists after the characters - those have to draw above them.
+		var frontNames:Array<String> = [];
+		var seenCharacter:Bool = false;
+		for (obj in data.objects)
+		{
+			if (isCharacterEntry(obj))
+			{
+				seenCharacter = true;
+				continue;
+			}
+			if (seenCharacter)
+			{
+				var objName:String = Std.string(Reflect.field(obj, 'name'));
+				if (objName.length > 0) frontNames.push(objName);
+			}
+		}
+
+		// passing null for the characters makes StageData drop those entries on its own, so we get
+		// exactly the plain sprites back without guessing what a stage editor wrote in "type"
+		var list:Map<String, FlxSprite> = StageData.addObjectsToState(data.objects, null, null, null, null);
+		var behind:Map<String, FlxSprite> = new Map<String, FlxSprite>();
+		var front:Map<String, FlxSprite> = new Map<String, FlxSprite>();
+		for (key => spr in list)
+		{
+			if (frontNames.contains(key)) front.set(key, spr);
+			else behind.set(key, spr);
+		}
+
+		var added:Int = placeStageSprites(owned, behind, firstCharacterIndex());
+		added += placeStageSprites(owned, front, gameViewEndIndex());
+		stageObjects.set(name, owned);
+		return added;
+	}
+
+	/** True for the entries a stage file uses to place the character groups. */
+	function isCharacterEntry(obj:Dynamic):Bool
+	{
+		var type:String = Std.string(Reflect.field(obj, 'type')).toLowerCase();
+		if (CHARACTER_TYPES.contains(type)) return true;
+		var objName:String = Std.string(Reflect.field(obj, 'name'));
+		return StageData.reservedNames.contains(objName);
+	}
+
+	/** Inserts built sprites into the members list starting at `at` (-1 = append), registers their
+	 * variable names and returns how many were placed. */
+	function placeStageSprites(owned:Array<FlxSprite>, list:Map<String, FlxSprite>, at:Int):Int
+	{
+		var index:Int = (at < 0) ? members.length : at;
+		var count:Int = 0;
+		for (key => spr in list)
+		{
+			insert(index, spr);
+			index++;
+			owned.push(spr);
+			variables.set(key, spr);
+			count++;
+		}
+		return count;
+	}
+
+	/** Index of the topmost character group - anything placed there draws behind the characters. */
+	function firstCharacterIndex():Int
+	{
+		var index:Int = -1;
+		for (group in [gfGroup, dadGroup, boyfriendGroup])
+		{
+			if (group == null) continue;
+			var i:Int = members.indexOf(group);
+			if (i >= 0 && (index < 0 || i < index)) index = i;
+		}
+		return index < 0 ? 0 : index;
+	}
+
+	/** End of the game view: just before the HUD starts drawing, so a stage never covers it. */
+	function gameViewEndIndex():Int
+	{
+		var index:Int = -1;
+		var groups:Array<FlxBasic> = [uiGroup, noteGroup, comboGroup];
+		for (group in groups)
+		{
+			if (group == null) continue;
+			var i:Int = members.indexOf(group);
+			if (i >= 0 && (index < 0 || i < index)) index = i;
+		}
+		if (index < 0 && stageFader != null)
+		{
+			var i:Int = members.indexOf(stageFader);
+			if (i >= 0) index = i;
+		}
+		return index;
+	}
+
+	/** Moves the characters and applies the camera settings a stage file asks for. */
+	function applyStageLayout(data:StageFile, name:String = ''):Void
+	{
+		if (data == null)
+		{
+			trace('Change Stage layout: no json, keeping the current layout');
+			return;
+		}
+
+		defaultCamZoom = data.defaultZoom;
+		if (data.camera_speed != null) cameraSpeed = data.camera_speed;
+
+		if (data.boyfriend != null) { BF_X = data.boyfriend[0]; BF_Y = data.boyfriend[1]; }
+		if (data.girlfriend != null) { GF_X = data.girlfriend[0]; GF_Y = data.girlfriend[1]; }
+		if (data.opponent != null) { DAD_X = data.opponent[0]; DAD_Y = data.opponent[1]; }
+
+		boyfriendCameraOffset = (data.camera_boyfriend != null) ? data.camera_boyfriend : [0, 0];
+		opponentCameraOffset = (data.camera_opponent != null) ? data.camera_opponent : [0, 0];
+		girlfriendCameraOffset = (data.camera_girlfriend != null) ? data.camera_girlfriend : [0, 0];
+
+		if (data.hide_girlfriend && gf != null) gf.visible = false;
+
+		trace('Change Stage layout: zoom=$defaultCamZoom  boyfriend=${data.boyfriend != null ? '' + [BF_X, BF_Y] : "MISSING (kept " + [BF_X, BF_Y] + ")"}' +
+			'  girlfriend=${data.girlfriend != null ? '' + [GF_X, GF_Y] : "MISSING (kept " + [GF_X, GF_Y] + ")"}' +
+			'  opponent=${data.opponent != null ? '' + [DAD_X, DAD_Y] : "MISSING (kept " + [DAD_X, DAD_Y] + ")"}');
+
+		placeCharacters();
+
+		// refresh the record: a stage built earlier with "keep" left someone else's layout in it
+		if (name != null && name.length > 0)
+			stageCam.set(name, [defaultCamZoom, cameraSpeed, BF_X, BF_Y, GF_X, GF_Y, DAD_X, DAD_Y]);
+	}
+
+	/** Puts the three character groups wherever BF_X/GF_X/DAD_X currently point. */
+	function placeCharacters():Void
+	{
+		if (boyfriendGroup != null) boyfriendGroup.setPosition(BF_X, BF_Y);
+		if (dadGroup != null) dadGroup.setPosition(DAD_X, DAD_Y);
+		if (gfGroup != null) gfGroup.setPosition(GF_X, GF_Y);
+	}
+
+	/** Brings a freshly built stage up to date with the song position and let it layer things above characters. */
+	function syncStageVars(stage:BaseStage):Void
+	{
+		stage.curStep = curStep;
+		stage.curDecStep = curDecStep;
+		stage.curBeat = curBeat;
+		stage.curDecBeat = curDecBeat;
+		stage.curSection = curSection;
+		stage.createPost();
+	}
+
+	/**
+	 * Reads a stage file and says out loud why it failed. `StageData.getStageFile()` catches
+	 * everything and quietly returns a dummy file, which makes a broken swap look like a no-op.
+	 * @return the parsed file, or null when it's missing/unreadable (already logged).
+	 */
+	function findStageFile(name:String):Null<StageFile>
+	{
+		// everything a stage file could plausibly live in, in order
+		var candidates:Array<String> = [];
+		candidates.push(Paths.getPath('stages/' + name + '.json', TEXT, null, true)); // engine order: current mod -> global mods -> assets
+		#if MODS_ALLOWED
+		candidates.push(Paths.mods('stages/$name.json'));                             // mods/stages/ (plain test setup)
+		for (dir in allModDirectories())
+			candidates.push(Paths.mods('$dir/stages/$name.json'));                    // mods/<mod>/stages/
+		#end
+		candidates.push(Paths.getSharedPath('stages/$name.json'));                    // assets/shared/stages/
+
+		var tried:Array<String> = [];
+		for (path in candidates)
+		{
+			if (tried.indexOf(path) >= 0) continue;
+			tried.push(path);
+
+			var content:String = null;
+			#if MODS_ALLOWED
+			if (FileSystem.exists(path))
+				content = File.getContent(path);
+			else if (OpenFlAssets.exists(path))
+				content = OpenFlAssets.getText(path);
+			#else
+			if (OpenFlAssets.exists(path))
+				content = OpenFlAssets.getText(path);
+			#end
+
+			if (content != null)
+			{
+				lastStageFilePath = path;
+				return parseStageFile(path, content);
+			}
+		}
+
+		lastStageFilePath = '';
+
+		// nothing - report every place that was searched and what actually exists
+		var msg:String = 'Change Stage: no stage file for "$name". Looked at:\n  ' + tried.join('\n  ');
+		var available:Array<String> = listAvailableStageFiles();
+		if (available.length > 0)
+			msg += '\nStage files that do exist: ' + available.join(', ');
+		else
+			msg += '\nNo "stages/*.json" found under mods/ or assets/shared/.';
+		#if MODS_ALLOWED
+		msg += '\nmods root "' + Paths.mods() + '" exists: ' + FileSystem.exists(Paths.mods());
+		if (FileSystem.exists(Paths.mods()))
+			msg += ', contains: [' + allModDirectories().join(', ') + ']';
+		#end
+		#if sys
+		msg += '\nworking directory: ' + Sys.getCwd(); // relative paths like "mods/" resolve against this
+		#end
+		msg += '\nA stage made of code instead of a .json also needs its name listed in PlayState.spawnStageClass().';
+		stageLog(msg, true);
+		return null;
+	}
+
+	function parseStageFile(path:String, content:String):Null<StageFile>
+	{
+		try
+		{
+			return cast tjson.TJSON.parse(content);
+		}
+		catch (e:Dynamic)
+		{
+			stageLog('Change Stage: found "$path" but it failed to parse - $e', true);
+			return null;
+		}
+	}
+
+	#if MODS_ALLOWED
+	/** Every folder under mods/, enabled or not - used to reach stages outside the current mod. */
+	function allModDirectories():Array<String>
+	{
+		var dirs:Array<String> = [];
+		try
+		{
+			for (entry in FileSystem.readDirectory(Paths.mods()))
+			{
+				if (FileSystem.isDirectory(Paths.mods(entry)) && dirs.indexOf(entry) < 0)
+					dirs.push(entry);
+			}
+		}
+		catch (e:Dynamic) {}
+		return dirs;
+	}
+	#end
+
+	/** Names of every stages/*.json that can be reached, so the log can suggest what to write. */
+	function listAvailableStageFiles():Array<String>
+	{
+		var names:Array<String> = [];
+		#if MODS_ALLOWED
+		var folders:Array<String> = [Paths.mods('stages')];
+		for (dir in allModDirectories())
+			folders.push(Paths.mods('$dir/stages'));
+
+		for (folder in folders)
+		{
+			if (!FileSystem.exists(folder) || !FileSystem.isDirectory(folder)) continue;
+			for (file in FileSystem.readDirectory(folder))
+			{
+				if (!file.toLowerCase().endsWith('.json')) continue;
+				var stageName:String = file.substr(0, file.length - 5);
+				if (names.indexOf(stageName) < 0) names.push(stageName);
+			}
+		}
+		#end
+		return names;
+	}
+
+	function stageLog(msg:String, asError:Bool = false):Void
+	{
+		trace(msg);
+		if (asError)
+		{
+			FlxG.log.error(msg);
+			showStageNotice(msg); // release builds have no console, so put it on screen too
+		}
+		else FlxG.log.warn(msg);
+	}
+
+	/** Puts a stage-swap problem on screen for a few seconds - works in release builds. */
+	function showStageNotice(msg:String):Void
+	{
+		if (stageNotice == null)
+		{
+			stageNotice = new FlxText(12, 60, FlxG.width - 24, '', 18);
+			stageNotice.setFormat(Paths.font('vcr.ttf'), 18, 0xFFFF5555, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			stageNotice.borderSize = 1.5;
+			stageNotice.cameras = [camOther];
+			stageNotice.scrollFactor.set();
+			stageNotice.visible = false;
+			add(stageNotice);
+		}
+		stageNotice.text = msg;
+		stageNotice.visible = true;
+		stageNotice.alpha = 1;
+		stageNoticeTime = 10;
+	}
+
+	function updateStageNotice(elapsed:Float):Void
+	{
+		if (stageNotice == null || !stageNotice.visible) return;
+		stageNoticeTime -= elapsed;
+		if (stageNoticeTime <= 0)
+			stageNotice.visible = false;
+	}
+
+	function buildStage(name:String, applyLayout:Bool):Bool
+	{
+		var data:StageFile = findStageFile(name); // null is fine for stages that are pure code
+
+		var before:Array<BaseStage> = stages.copy();
+		spawnStageClass(name);
+		var built:Array<BaseStage> = [];
+		for (stage in stages)
+			if (before.indexOf(stage) < 0) built.push(stage);
+
+		// a stage is allowed to own no sprites at all - mod stages are usually drawn by stages/<name>.lua
+		if (built.length < 1 && data == null)
+		{
+			stageLog('Change Stage: "$name" has neither a stage class nor a stages/$name.json. It needs one of the two.', true);
+			return false;
+		}
+
+		var objectCount:Int = (data != null && data.objects != null) ? data.objects.length : 0;
+		var beforeMembers:Array<FlxBasic> = members.copy();
+
+		if (applyLayout) applyStageLayout(data, name);
+		var added:Int = addStageObjectsFromJson(name, data, false);
+		registerStageInstances(name, built);
+		for (stage in built) syncStageVars(stage);
+
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+		startStageScripts(name);
+		#end
+
+		// anything the stage script made belongs to the stage, so hiding/showing can reach it
+		var fromScript:Int = collectStageObjects(name, beforeMembers);
+
+		if (objectCount > 0 && added < 1)
+			stageLog('Change Stage: "$name" lists $objectCount object(s) but none got built - check their "filters" (quality/story-mode) and "type" fields.', true);
+
+		if (built.length < 1 && added < 1 && fromScript < 1)
+			stageLog('Change Stage: "$name" owns no sprites itself - layout applied, stages/$name.lua is expected to draw it.');
+
+		// stays out of sight until it is actually swapped in
+		hideStage(name);
+		bringFaderToFront(); // the new stage added its sprites at the end of the list already
+		trace('Change Stage: built stage "$name" (${built.length} stage class(es), $added json sprite(s), $fromScript script sprite(s))');
+		return true;
+	}
+
+	/** Loads stages/<name>.lua / .hx and remembers which scripts it started, so they can be stopped later. */
+	function startStageScripts(name:String):Void
+	{
+		var started:Array<Dynamic> = [];
+
+		#if LUA_ALLOWED
+		var before:Array<Dynamic> = luaArray.copy();
+		startLuasNamed('stages/' + name + '.lua');
+		for (script in luaArray)
+			if (before.indexOf(script) < 0) started.push(script);
+		#end
+
+		#if HSCRIPT_ALLOWED
+		var beforeH:Array<Dynamic> = hscriptArray.copy();
+		startHScriptsNamed('stages/' + name + '.hx');
+		for (script in hscriptArray)
+			if (beforeH.indexOf(script) < 0) started.push(script);
+		#end
+
+		stageScripts.set(name, started);
+	}
+
+	/** Stops the scripts a stage started - only used when the stage is thrown away for good. */
+	function stopStageScripts(name:String):Void
+	{
+		var scripts:Array<Dynamic> = stageScripts.get(name);
+		if (scripts == null) return;
+
+		for (script in scripts)
+		{
+			if (script == null) continue;
+			#if LUA_ALLOWED
+			if (Std.isOfType(script, FunkinLua))
+			{
+				var lua:FunkinLua = cast script;
+				lua.call('onDestroy', []);
+				lua.stop();
+				luaArray.remove(lua);
+				continue;
+			}
+			#end
+			#if HSCRIPT_ALLOWED
+			if (Std.isOfType(script, HScript))
+			{
+				var hx:HScript = cast script;
+				if (hx.exists('onDestroy')) hx.call('onDestroy');
+				hx.destroy();
+				hscriptArray.remove(hx);
+			}
+			#end
+		}
+		stageScripts.remove(name);
+	}
+
+	/**
+	 * Claims every sprite that showed up after `oldMembers` was taken, and is not already spoken
+	 * for, as belonging to `name`. That is how sprites made by stages/<name>.lua become hideable.
+	 */
+	function collectStageObjects(name:String, oldMembers:Array<FlxBasic>):Int
+	{
+		var mine:Array<FlxSprite> = stageObjects.get(name);
+		if (mine == null) { mine = []; stageObjects.set(name, mine); }
+
+		var known:Array<FlxBasic> = [];
+		for (key in stageObjects.keys())
+			for (spr in stageObjects.get(key))
+				if (spr != null) known.push(spr);
+
+		var count:Int = 0;
+		for (member in members.copy())
+		{
+			if (member == null || member == stageFader || member == stageNotice) continue;
+			if (oldMembers != null && oldMembers.indexOf(member) >= 0) continue; // already there before this stage
+			if (known.indexOf(member) >= 0) continue;
+			if (!Std.isOfType(member, FlxSprite)) continue;
+			var spr:FlxSprite = cast member;
+			mine.push(spr);
+			known.push(spr);
+			count++;
+		}
+		if (count > 0) keepInGameView(mine);
+		return count;
+	}
+
+	/** Sprites a stage script only adds later on (onBeatHit/onStepHit) still have to obey hide/show. */
+	function scanNewStageObjects():Void
+	{
+		if (baselineMembers == null || currentStageName == null || currentStageName.length < 1) return;
+		var found:Int = collectStageObjects(currentStageName, baselineMembers);
+		if (found > 0)
+			trace('Change Stage: "$currentStageName" added $found sprite(s) after it was built');
+	}
+
+	/** addLuaSprite(tag, true) appends at the very end, which is on top of the HUD - pull those back down. */
+	function keepInGameView(sprites:Array<FlxSprite>):Void
+	{
+		var end:Int = gameViewEndIndex();
+		if (end < 0) return;
+
+		var cursor:Int = end;
+		for (spr in sprites)
+		{
+			if (spr == null) continue;
+			var i:Int = members.indexOf(spr);
+			if (i < 0 || i <= cursor) continue;
+			members.remove(spr);
+			members.insert(cursor, spr);
+			cursor++;
+		}
+	}
+
+	/** Keeps the swap overlay above anything a freshly built stage appended to the members list. */
+	function bringFaderToFront():Void
+	{
+		if (stageFader == null) return;
+		var i:Int = members.indexOf(stageFader);
+		if (i >= 0 && i != members.length - 1)
+		{
+			members.remove(stageFader);
+			members.push(stageFader);
+		}
+	}
+
+	function hideStage(name:String):Void
+	{
+		if (name == null || name.length < 1) return;
+		var built:Array<BaseStage> = stageCache.get(name);
+		if (built != null)
+			for (stage in built) stage.setStageHidden();
+		var sprites:Array<FlxSprite> = stageObjects.get(name);
+		if (sprites != null)
+			for (spr in sprites)
+				if (spr != null) spr.visible = false;
+	}
+
+	function showStage(name:String):Void
+	{
+		if (name == null || name.length < 1) return;
+		var built:Array<BaseStage> = stageCache.get(name);
+		if (built != null)
+			for (stage in built) stage.setStageShown();
+		var sprites:Array<FlxSprite> = stageObjects.get(name);
+		if (sprites != null)
+			for (spr in sprites)
+				if (spr != null) spr.visible = true;
+	}
+
+	/** Drops a cached stage and everything belonging to it, so the next swap rebuilds it from scratch. */
+	public function purgeStage(name:String):Void
+	{
+		if (name == null || name.length < 1) return;
+
+		var built:Array<BaseStage> = stageCache.get(name);
+		if (built != null)
+		{
+			for (stage in built)
+			{
+				stage.destroyStage();
+				stages.remove(stage);
+				stage.destroy();
+			}
+			stageCache.remove(name);
+		}
+
+		var sprites:Array<FlxSprite> = stageObjects.get(name);
+		if (sprites != null)
+		{
+			for (spr in sprites)
+			{
+				if (spr == null) continue;
+				var deadKeys:Array<String> = [];
+				for (key => value in variables)
+					if (value == spr) deadKeys.push(key);
+				for (key in deadKeys) variables.remove(key);
+
+				remove(spr, true);
+				spr.destroy();
+			}
+			stageObjects.remove(name);
+		}
+
+		stopStageScripts(name);
+	}
+
+	function performStageSwap(name:String, applyLayout:Bool):Bool
+	{
+		if (!stageCache.exists(name))
+		{
+			if (!buildStage(name, applyLayout)) return false;
+		}
+		else if (applyLayout)
+			applyStageLayout(findStageFile(name), name);
+
+		if (applyLayout)
+		{
+			// a stage built from code set its zoom and character spots in create() and has no json
+			// to read them back from, so take them from what was recorded when it was built
+			var cam:Array<Float> = stageCam.get(name);
+			if (cam != null)
+			{
+				defaultCamZoom = cam[0];
+				cameraSpeed = cam[1];
+				BF_X = cam[2]; BF_Y = cam[3];
+				GF_X = cam[4]; GF_Y = cam[5];
+				DAD_X = cam[6]; DAD_Y = cam[7];
+				placeCharacters();
+			}
+			// nothing but the per frame lerp writes this, and it is skipped entirely when
+			// camZooming is off - so set it here or the new stage keeps the old one's zoom
+			FlxG.camera.zoom = defaultCamZoom;
+			// the new stage's camera offsets only take effect once the focus is recomputed
+			moveCameraSection();
+			// FlxG.camera follows camFollow at 0.04 * cameraSpeed per frame, which would slide the
+			// view across over the better part of a second - the swap should land already framed
+			FlxG.camera.snapToTarget();
+		}
+
+		hideStage(currentStageName);
+		showStage(name);
+
+		currentStageName = name;
+		curStage = name;
+		setOnScripts('currentStage', currentStageName);
+		setOnScripts('curStage', currentStageName); // stage scripts read this, so it has to follow the swap
+		callOnScripts('onStageChange', [currentStageName]);
+		return true;
+	}
+
+	function getStageFader():FlxSprite
+	{
+		if (stageFader != null)
+		{
+			// always the last thing the game view draws
+			if (members.indexOf(stageFader) != members.length - 1)
+			{
+				members.remove(stageFader);
+				members.push(stageFader);
+			}
+			return stageFader;
+		}
+
+		// camOther is never zoomed and never scrolls, so a screen sized quad on it covers the whole
+		// window - HUD included - no matter what camGame is doing at that moment
+		stageFader = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		stageFader.setPosition(0, 0);
+		stageFader.scrollFactor.set();
+		stageFader.cameras = [camOther];
+		stageFader.alpha = 0;
+		add(stageFader);
+		return stageFader;
+	}
+
+	/**
+	 * Swaps the stage while the song is running - usable from events and scripts.
+	 *
+	 * @param name        Stage to bring on screen (a `stages/<name>.json`, and/or an entry in `spawnStageClass`).
+	 * @param fade        Cover the view with a short black fade so the pop isn't visible (default true).
+	 * @param applyLayout Move the characters and apply that stage's zoom + camera offsets (default true).
+	 * @param reload      Throw the cached copy away first and rebuild it.
+	 * @return true when the request was taken; with `fade` on, the swap itself lands once the screen is black.
+	 */
+	public function changeStage(name:String, fade:Bool = true, applyLayout:Bool = true, reload:Bool = false):Bool
+	{
+		if (name == null) return false;
+		name = name.trim();
+		if (name.length < 1) return false;
+
+		if (reload) purgeStage(name);
+		if (name == currentStageName && !reload) return false;
+
+		if (!fade)
+			return performStageSwap(name, applyLayout);
+
+		var fader:FlxSprite = getStageFader();
+		FlxTween.cancelTweensOf(fader);
+		fader.alpha = 0;
+		FlxTween.tween(fader, {alpha: 1}, STAGE_FADE_TIME, {onComplete: function(_) {
+			performStageSwap(name, applyLayout);
+			FlxTween.tween(fader, {alpha: 0}, STAGE_FADE_TIME, {startDelay: 0.05});
+		}});
+		return true;
 	}
 
 	public function moveCameraSection(?sec:Null<Int>):Void {
@@ -3885,6 +4927,17 @@ class PlayState extends MusicBeatState
 	}
 
 	override function destroy() {
+		if (feverVisualizer != null)
+		{
+			feverVisualizer.destroySoft();
+			remove(feverVisualizer, true);
+			feverVisualizer = null;
+		}
+		feverConditions = [];
+		feverChecking = false;
+		feverReady = false;
+		feverActive = false;
+
 		if (psychlua.CustomSubstate.instance != null)
 		{
 			closeSubState();
@@ -3919,6 +4972,35 @@ class PlayState extends MusicBeatState
 			videoCutscene.destroy();
 			videoCutscene = null;
 		}
+		#end
+
+		// Change Stage: drop the swap overlay and the stage bookkeeping
+		if (stageNotice != null)
+		{
+			remove(stageNotice, true);
+			stageNotice.destroy();
+			stageNotice = null;
+		}
+		if (stageFader != null)
+		{
+			FlxTween.cancelTweensOf(stageFader);
+			remove(stageFader, true);
+			stageFader.destroy();
+			stageFader = null;
+		}
+		stageCache.clear();
+		stageObjects.clear();
+		stageScripts.clear();
+		stageCam.clear();
+
+		#if VIDEOS_ALLOWED
+		for (video in preloadedVideos) // videos that were loaded but never got to play
+		{
+			video.finishCallback = null;
+			video.onSkip = null;
+			if (video != videoCutscene) video.destroy();
+		}
+		preloadedVideos.clear();
 		#end
 
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
@@ -3992,6 +5074,9 @@ class PlayState extends MusicBeatState
 
 		setOnScripts('curBeat', curBeat);
 		callOnScripts('onBeatHit');
+
+		if (feverVisualizer != null)
+			feverVisualizer.onBeat();
 
 		// Note Jump: trigger beat-sync tween on proxy — scale/angle/alpha ripple to all strums via update()
 		if (noteJumpProxy != null)

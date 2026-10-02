@@ -39,6 +39,15 @@ class BaseStage extends FlxBasic
 	public var gfGroup(get, never):FlxSpriteGroup;
 
 	public var unspawnNotes(get, never):Array<Note>;
+
+	/**
+	 * Everything this stage injected into the state. Tracked so a stage can be pulled out
+	 * cleanly at runtime (see `setStageHidden` / `destroyStage`), which is what makes
+	 * swapping stages mid-song possible.
+	 */
+	public var ownedObjects:Array<FlxBasic> = [];
+	/** Visibility each owned object had right before this stage was hidden (restored by `setStageShown`). */
+	var rememberedVisibility:Map<FlxBasic, Bool> = [];
 	
 	public var camGame(get, never):FlxCamera;
 	public var camHUD(get, never):FlxCamera;
@@ -95,9 +104,63 @@ class BaseStage extends FlxBasic
 	public function noteMissPress(direction:Int) {}
 
 	// Things to replace FlxGroup stuff and inject sprites directly into the state
-	function add(object:FlxBasic) return FlxG.state.add(object);
-	function remove(object:FlxBasic, splice:Bool = false) return FlxG.state.remove(object, splice);
-	function insert(position:Int, object:FlxBasic) return FlxG.state.insert(position, object);
+	/** Marks `object` as owned by this stage so hiding/showing/destroying the stage touches it too. */
+	public function track(object:FlxBasic)
+	{
+		if (object != null && ownedObjects.indexOf(object) < 0)
+			ownedObjects.push(object);
+		return object;
+	}
+
+	function untrack(object:FlxBasic)
+	{
+		if (object != null) ownedObjects.remove(object);
+		return object;
+	}
+
+	function add(object:FlxBasic) { track(object); return FlxG.state.add(object); }
+	function remove(object:FlxBasic, splice:Bool = false) { untrack(object); return FlxG.state.remove(object, splice); }
+	function insert(position:Int, object:FlxBasic) { track(object); return FlxG.state.insert(position, object); }
+
+	/** Hides what the stage added and stops its callbacks, keeping everything alive for reuse. */
+	public function setStageHidden()
+	{
+		for (object in ownedObjects)
+		{
+			if (object == null) continue;
+			rememberedVisibility.set(object, object.visible);
+			object.visible = false;
+		}
+		active = false;
+	}
+
+	/** Restores a previously hidden stage. */
+	public function setStageShown()
+	{
+		for (object in ownedObjects)
+		{
+			if (object == null) continue;
+			// objects the stage itself keeps hidden stay hidden
+			object.visible = rememberedVisibility.exists(object) ? rememberedVisibility.get(object) : true;
+		}
+		rememberedVisibility.clear();
+		active = true;
+	}
+
+	/** Pulls every tracked object back out of the state and destroys it. */
+	public function destroyStage()
+	{
+		for (object in ownedObjects)
+		{
+			if (object == null) continue;
+			FlxG.state.remove(object, true);
+			object.destroy();
+		}
+		ownedObjects.resize(0);
+		rememberedVisibility.clear();
+		active = false;
+		exists = false;
+	}
 	
 	public function addBehindGF(obj:FlxBasic) return insert(members.indexOf(game.gfGroup), obj);
 	public function addBehindBF(obj:FlxBasic) return insert(members.indexOf(game.boyfriendGroup), obj);

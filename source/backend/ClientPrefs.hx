@@ -26,7 +26,7 @@ import states.TitleState;
 	public var cacheOnGPU:Bool = #if (switch || html5) false #else true #end; // GPU Caching made by Raltyro (桌面端默认开启，减少运行时纹理上传卡顿)
 	public var framerate:Int = 60;
 	public var vsync:Bool = false;
-	public var audioSupportExtend:Bool = false; // 实验性：启用非 OGG 音频格式（MP3/WAV/FLAC 等）支持
+	public var audioSupportExtend:Bool = true;  // 启用非 OGG 音频格式（MP3/WAV/FLAC 等）支持；OGG 仍优先匹配，只在没有 OGG 时才用别的
 	public var easterEggUnlocked:Bool = false; // 彩蛋：是否在 Credits 输入秘籍解锁
 	public var easterEggSound:Bool = false;    // 彩蛋：使用 egg 文件夹音效替换部分 sound
 	public var camZooms:Bool = true;
